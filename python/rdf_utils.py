@@ -38,7 +38,10 @@ def define_variables(df_, new_defined_variables):
         return df_
     else:
         for _var,_def in new_defined_variables.items(): # update variables
-            df_ = df_.Define(_var, _def)
+            if type(_def)==str:
+                df_ = df_.Define(_var, _def)
+            else:
+                print('error in config file defining new variables, not supported yet')
         return df_
     
 def snap_shots(arguments):
@@ -52,7 +55,8 @@ def snap_shots(arguments):
     df_ = define_variables(df_, new_defined_variables)
     df_ = df_.Define("true_weight","aMCatNLOweight*{0}*{1}/{2}".format(XS, lumi, sumOfweights))
     df_ = apply_filters(df_, filters)
-    outBranchList = list(interested_variables)
+    # outBranchList = list(interested_variables)
+    outBranchList = []
     outBranchList.append('true_weight')
     for key in new_defined_variables:
         outBranchList.append(key)

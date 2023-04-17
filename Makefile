@@ -1,22 +1,36 @@
-CXX=g++
-CXXFLAGS=-Wall -Wextra -pedantic -std=c++11 -I./include
-LDFLAGS=-shared
-LIBDIR=./lib
-SRCDIR=./src
-SCRIPTDIR=./script
+ROOTCFLAGS = $(shell root-config --cflags)
+ROOTLIBS = $(shell root-config --libs)
+ROOTGLIBS = $(shell root-config --glibs)
 
-all: $(LIBDIR)/mylib.so
+# Compiler options
+CC = g++
+CFLAGS = -c -Wall -I include/ $(ROOTCFLAGS)
 
-$(LIBDIR)/mylib.so: $(SRCDIR)/mylib.cpp | $(LIBDIR)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $<
+# Linker options
+LD = g++
+LDFLAGS = $(ROOTLIBS) $(ROOTGLIBS)
 
-$(LIBDIR):
-	mkdir -p $@
+# Directories
+SRC_DIR = src
+OBJ_DIR = obj
+LIB_DIR = lib
 
-install: $(LIBDIR)/mylib.so
-	cp $(LIBDIR)/mylib.so $(SCRIPTDIR)
+# Source files and object files
+SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-clean:
-	rm -rf $(LIBDIR)/mylib.so
+# Library files
+LIBRARIES = $(patsubst $(SRC_DIR)/%.cpp,$(LIB_DIR)/%.so,$(SRC_FILES))
 
-.PHONY: all install clean
+# Targets
+all: $(LIBRARIES)
+
+$(LIB_DIR)/%.so: $(OBJ_DIR)/%.o
+	$(LD) $(LDFLAGS) -shared $< -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	$(CC) $(CFLAGS) $< -o $@
+
+# Clean
+# clean:
+#	rm -f $(OBJ_DIR)/*.o $(LIBRARIES)

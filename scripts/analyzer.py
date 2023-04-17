@@ -2,6 +2,7 @@ from python.read_inputs import build_default_fileset, argparse, json, os, sys
 from python.rdf_utils import apply_filters, define_variables, R, genInfoGether, Fast_SnapShots
 from configs.plot_config_bigNtuple import * # need modification if you want to change the config
 R.gROOT.SetBatch(True)
+from shutil import rmtree
 
 parser = argparse.ArgumentParser(description="All the arguments to use the plotting tool.")
 parser.add_argument('-m', '--MultiThread', dest='MT', type=int, default=1, help="The number of threads used in the process.")
@@ -29,10 +30,17 @@ if __name__ == '__main__':
         fileset = json.loads(data)
         if not os.path.exists(args.outputDir):
             os.makedirs(args.outputDir)
-            print('output directory : ', args.outputDir)
+            
         for process in process_list:
-            os.makedirs('/'.join([args.outputDir, process]))
+            if os.path.exists('/'.join([args.outputDir, process])):
+                print('output directory exists(over writing) : ', '/'.join([args.outputDir, process]))
+                rmtree('/'.join([args.outputDir, process]))
+                # os.rmdir('/'.join([args.outputDir, process]))
+                os.makedirs('/'.join([args.outputDir, process]))
+            else:
+                os.makedirs('/'.join([args.outputDir, process]))
+                print('generating output directory : ', '/'.join([args.outputDir, process]))
+                
             Fast_SnapShots(fileset, process, args.MT, args.outputDir)
-        
     
     sys.exit(0)
