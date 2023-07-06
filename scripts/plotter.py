@@ -1,35 +1,10 @@
-from util import *
-import more_itertools
+from configs.plot_config_bigNtuple import * # need modification if you want to change the config
 R.gROOT.SetBatch(True)
 
 parser = argparse.ArgumentParser(description="All the arguments to use the plotting tool.")
 parser.add_argument('-m', '--MultiThread', dest='MT', type=int, default=1, help="The number of threads used in the process.")
-parser.add_argument('-re', '--reGenJson', dest='regen', type=bool, default=False, help="True if json file is need to be regenerated.")
 parser.add_argument('-c', '--ConfigFile', dest='config', type=str, default=None, help="The configuration file to control the plotter.")
-parser.add_argument('-his', '--Histo', dest='his', type=bool, default=False, help="True if histograms are already generated and no need to be regenerated.")
-parser.add_argument('-s', '--Stage', dest='stage', type=int, default=1, help="1: Generate Histograms and store (condor only!); 2: Plotting from histogram.")
 args = parser.parse_args()
-
-def histo_generator_comb(sample):
-    batch_size = 1
-    filelist_batches = list(more_itertools.chunked(fileset[sample], batch_size))
-    print(sample + '>>>>>>>')
-    filelist_args = []
-    for i in range(len(filelist_batches)):
-        filelist_args.append([filelist_batches[i],sample])
-    result_list = []
-    with tqdm(total=len(list(enumerate(filelist_batches)))) as pbar:
-        for i, results in enumerate(Pool(round(args.MT*0.5)).imap_unordered(histo_generator, list(enumerate(filelist_args)))):
-            result_list.append(results)
-            pbar.update()
-    
-    for quantity, histo_ in result_list[0].items():
-        histo_dict[sample+'_'+quantity] = histo_.Clone()
-        
-    for result in result_list[1:]:        
-        for quantity, histo_ in result[1].items():
-            histo_dict[sample+'_'+quantity].Add(histo_)
-    return 0
 
 def histo_generator(df_args): 
 # build up the dataframe (read, define new variables, prune the branches)
@@ -205,45 +180,46 @@ def plot_generator(plot_arg):
 
 if __name__ == '__main__':
     
-    if args.stage == 1 :
-        # read config file:
-        confName = args.config.split('/')[-1].split('.')[-2]
-        print("Reading from " + confName)
-    
-        # __import__(confName)
-        exec('from ' + confName + ' import *')
-    
-        R.EnableImplicitMT(args.MT) # Enable multi-thread running
-        fileset = build_default_fileset(input_Dir, args.regen, jsonFile) # automatically generate a json file include the root files
-        
-        print("Generating Histograms from root files through RDF ...")
-        for sample in sample_list:
-            histo_generator_comb(sample)
-    
-        # for quantity in interest_quantities: # remove when we use data
-        #     histo_dict['fake_data'+'_'+quantity] = histo_dict['TTbar'+"_"+quantity] + histo_dict['DY+Jets'+"_"+quantity] + histo_dict['VBFH'+"_"+quantity] + histo_dict['ggFH'+"_"+quantity]
-        print("Generating Histograms from root files throught RDF ... DONE.")
-        
-        hist_file = R.TFile("hist_all_0328.root","RECREATE")
-        for name, hist in histo_dict.items():
-            hist.Write()
-        hist_file.Close()
-        
-    elif args.stage == 2:
-        if os.path.isdir(outputDir):
-            os.system('rm -rfv ' + outputDir)
-            os.system('mkdir -p ' + outputDir)
-        else:
-            os.system('mkdir -p ' + outputDir)
-        
-        # develop something to open histo from root file
-        hist_file = R.TFile("hist_all.root","READ")
+    # read config file: ## This is still an interesting way to import the config file although I don't use it...
+    # confName = args.config.split('/')[-1].split('.')[-2]
+    # print("Reading from " + confName)
+    # __import__(confName) 
+    # exec('from ' + confName + ' import *')
 
-        print(">>>>>>>> Plotting >>>>>>>>")
-        with Pool(args.MT) as p:
-            p.map(plot_generator, list(interest_quantities.items()))
-        print(">>>>>>>> Done >>>>>>>>")
+    R.EnableImplicitMT(args.MT) # Enable multi-thread running
+    # fileset = build_default_fileset(input_Dir, args.regen, jsonFile) # automatically generate a json file include the root files
+    # only read the json file existing. can be thought twice later.
+    with open(jsonFile+'withWeight.json', 'r') as f:
+        data = f.read()
+        fileset = json.loads(data)
+        
+    print("Generating Histograms from root files through RDF ...")
+    for sample in sample_list:
+        histo_generator_comb(fileset, sample)
 
-        os.system('cp -r ./php-plots/plot-viewer ./php-plots/index.php '+outputDir)
+    # for quantity in interest_quantities: # remove when we use data
+    #     histo_dict['fake_data'+'_'+quantity] = histo_dict['TTbar'+"_"+quantity] + histo_dict['DY+Jets'+"_"+quantity] + histo_dict['VBFH'+"_"+quantity] + histo_dict['ggFH'+"_"+quantity]
+    print("Generating Histograms from root files throught RDF ... DONE.")
+
+    hist_file = R.TFile("hist_all_0328.root","RECREATE")
+    for name, hist in histo_dict.items():
+        hist.Write()
+    hist_file.Close()
+
+    if os.path.isdir(outputDir):
+        os.system('rm -rfv ' + outputDir)
+        os.system('mkdir -p ' + outputDir)
+    else:
+        os.system('mkdir -p ' + outputDir)
+
+    # develop something to open histo from root file
+    hist_file = R.TFile("hist_all.root","READ")
+
+    print(">>>>>>>> Plotting >>>>>>>>")
+    with Pool(args.MT) as p:
+        p.map(plot_generator, list(interest_quantities.items()))
+    print(">>>>>>>> Done >>>>>>>>")
+
+    os.system('cp -r ./php-plots/plot-viewer ./php-plots/index.php '+outputDir)
           
     exit(0)

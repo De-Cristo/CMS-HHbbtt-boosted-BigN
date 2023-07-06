@@ -3,6 +3,7 @@ import ROOT as R
 import re
 from array import array
 import importlib
+import more_itertools
 
 def add_lumi(year):
     lowX=0.55
@@ -64,4 +65,26 @@ def make_legend2():
     output.SetBorderSize(0)
     output.SetTextFont(62)
     return output
+
+
+def histo_generator_comb(fileset, sample):
+    batch_size = 1
+    filelist_batches = list(more_itertools.chunked(fileset[sample], batch_size))
+    print(sample + '>>>>>>>')
+    filelist_args = []
+    for i in range(len(filelist_batches)):
+        filelist_args.append([filelist_batches[i],sample])
+    result_list = []
+    with tqdm(total=len(list(enumerate(filelist_batches)))) as pbar:
+        for i, results in enumerate(Pool(round(args.MT*0.5)).imap_unordered(histo_generator, list(enumerate(filelist_args)))):
+            result_list.append(results)
+            pbar.update()
+    
+    for quantity, histo_ in result_list[0].items():
+        histo_dict[sample+'_'+quantity] = histo_.Clone()
+        
+    for result in result_list[1:]:        
+        for quantity, histo_ in result[1].items():
+            histo_dict[sample+'_'+quantity].Add(histo_)
+    return 0
 

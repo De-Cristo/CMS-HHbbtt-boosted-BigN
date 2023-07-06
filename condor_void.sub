@@ -1,0 +1,16 @@
+Universe = vanilla
+
+Location=/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/
+
+Executable = $(Location)/condor_void.sh
+Arguments = 24
+
+requirements = (OpSys == "LINUX")
+
+Output = void_$(ProcId).stdout
+Error = void_$(ProcId).stderr
+Log = void_$(ProcId).log
+
+Requirements = ((machine != "hercules.hcms.it"))
+
+queue

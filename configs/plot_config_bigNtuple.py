@@ -3,8 +3,10 @@ histo_dict = {}
 
 Location = '/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/'
 input_Dir = '/gwteras/cms/store/user/lichengz/NonResonantHHbbtt/MC_2018_09Apr2023_PUB/'
-outputDir = './BigNtuple_plots0410/'
+# input_Dir = '/gwteras/cms/store/user/lichengz/NonResonantHHbbtt_anomolySig/MC_2018_09Apr2023_PRI/'
+outputDir = Location+'/slimmed_ntuple_test/'
 jsonFile = Location+'./AutoMake_Run2_2018_MC_BigNtuple'
+# jsonFile = Location+'./AutoMake_Run2_2018_MC_BigNtuple_anomolySig'
 
 lumi = 59700 # in pb
 
@@ -15,12 +17,21 @@ lumi = 59700 # in pb
 
 # process_list = ['SMHH', 'VBFH', 'ggFH', 'TTbar', 'DY+JetspTBinned']
 process_list = ['SMHH']
+# process_list = ['SMHH','HHkl0', 'HHkl1', 'HHkl2p45', 'HHkl5p0']
 
 stack_dict = { # sample name and color codes(in hexadecimal)
     'VBFH': "#D05426",
     'ggFH': "#731512",
     'DY+JetspTBinned': "#F4E85E",
     'TTbar': "#322E95",
+}
+
+overlay_dict = { # sample name and color codes(in hexadecimal)
+    'SMHH' : "#950008",
+    'HHkl0': "#D05426",
+    'HHkl1': "#731512",
+    'HHkl2p45': "#F4E85E",
+    'HHkl5p0': "#322E95",
 }
 
 # Include necessary header
@@ -36,11 +47,11 @@ R.gInterpreter.Declare('#include "{}"'.format(bigNtuple_header_path))
 
 # the variables that we are interested in from the large root files
 interested_variables = {
-    "lheVPt", "aMCatNLOweight","MC_weight","EventNumber",
-    "genpart_px","genpart_py","genpart_pz","genpart_e","genpart_flags",
-    "genpart_pdg","genpart_status","genpart_TauGenDecayMode", "genpart_HZDecayMode", 
-    "genpart_TauMothInd", "genpart_HMothInd", "genpart_TauDecayMode",
-    "ak8jets_px","ak8jets_py","ak8jets_pz","ak8jets_e","ak8jets_SoftDropMass",
+    # "lheVPt", "aMCatNLOweight","MC_weight","EventNumber",
+    # "genpart_px","genpart_py","genpart_pz","genpart_e","genpart_flags",
+    # "genpart_pdg","genpart_status","genpart_TauGenDecayMode", "genpart_HZDecayMode", 
+    # "genpart_TauMothInd", "genpart_HMothInd", "genpart_TauDecayMode",
+    "ak8jets_px","ak8jets_py","ak8jets_pz","ak8jets_e","ak8jets_SoftDropMass", 
     "bParticleNetTauAK8JetTags_probHtt","bParticleNetTauAK8JetTags_probHtm","bParticleNetTauAK8JetTags_probHte",
     "bParticleNetTauAK8JetTags_probHbb","bParticleNetTauAK8JetTags_probHcc","bParticleNetTauAK8JetTags_probHqq",
     "bParticleNetTauAK8JetTags_probHgg","bParticleNetTauAK8JetTags_probQCD2hf","bParticleNetTauAK8JetTags_probQCD1hf","bParticleNetTauAK8JetTags_probQCD0hf",
@@ -53,44 +64,44 @@ new_defined_variables = {
     
     "leading_ak8jets_pT" : "calc_leading_ak8jet_pT(ak8jets_pT)",
     
-    "HttOverAll" : "bParticleNetTauAK8JetTags_probHtt/(bParticleNetTauAK8JetTags_probHtt+bParticleNetTauAK8JetTags_probHtm+bParticleNetTauAK8JetTags_probHte+bParticleNetTauAK8JetTags_probHbb+bParticleNetTauAK8JetTags_probHcc+bParticleNetTauAK8JetTags_probHqq+bParticleNetTauAK8JetTags_probHgg+bParticleNetTauAK8JetTags_probQCD2hf+bParticleNetTauAK8JetTags_probQCD1hf+bParticleNetTauAK8JetTags_probQCD0hf)",
+    "HttOverAll" : "bParticleNetTauAK8JetTags_probHtt/(bParticleNetTauAK8JetTags_probHtt+bParticleNetTauAK8JetTags_probHtm+bParticleNetTauAK8JetTags_probHte+bParticleNetTauAK8JetTags_probQCD2hf+bParticleNetTauAK8JetTags_probQCD1hf+bParticleNetTauAK8JetTags_probQCD0hf)",
     
-    "GenInfoVector" : "HiggsGenInfoVector(EventNumber, genpart_px, genpart_py, genpart_pz, genpart_e, genpart_flags, genpart_pdg, genpart_TauMothInd, genpart_HMothInd, genpart_TauGenDecayMode, genpart_HZDecayMode)",
+    # "GenInfoVector" : "HiggsGenInfoVector(EventNumber, genpart_px, genpart_py, genpart_pz, genpart_e, genpart_flags, genpart_pdg, genpart_TauMothInd, genpart_HMothInd, genpart_TauGenDecayMode, genpart_HZDecayMode)",
     
-    "h_status" : "HiggsGenInfoTransformer(GenInfoVector, 0)",
-    "tau_status" : "HiggsGenInfoTransformer(GenInfoVector, 1)",
-    "b_status" : "HiggsGenInfoTransformer(GenInfoVector, 2)",
-    "HbbE" : "HiggsGenInfoTransformer(GenInfoVector, 3)",
-    "HbbPt" : "HiggsGenInfoTransformer(GenInfoVector, 4)",
-    "HbbEta" : "HiggsGenInfoTransformer(GenInfoVector, 5)",
-    "HbbPhi" : "HiggsGenInfoTransformer(GenInfoVector, 6)",
-    "HbbM" : "HiggsGenInfoTransformer(GenInfoVector, 7)",
-    "HtautauE" : "HiggsGenInfoTransformer(GenInfoVector, 8)",
-    "HtautauPt" : "HiggsGenInfoTransformer(GenInfoVector, 9)",
-    "HtautauEta" : "HiggsGenInfoTransformer(GenInfoVector, 10)",
-    "HtautauPhi" : "HiggsGenInfoTransformer(GenInfoVector, 11)",
-    "HtautauM" : "HiggsGenInfoTransformer(GenInfoVector, 12)",
-    "Hb1E" : "HiggsGenInfoTransformer(GenInfoVector, 13)",
-    "Hb1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 14)",
-    "Hb1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 15)",
-    "Hb1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 16)",
-    "Hb2E" : "HiggsGenInfoTransformer(GenInfoVector, 17)",
-    "Hb2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 18)",
-    "Hb2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 19)",
-    "Hb2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 20)",
-    "Htau1E" : "HiggsGenInfoTransformer(GenInfoVector, 21)",
-    "Htau1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 22)",
-    "Htau1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 23)",
-    "Htau1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 24)",
-    "Htau2E" : "HiggsGenInfoTransformer(GenInfoVector, 25)",
-    "Htau2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 26)",
-    "Htau2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 27)",
-    "Htau2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 28)",
-    "HHE" : "HiggsGenInfoTransformer(GenInfoVector, 29)",
-    "HHPt" : "HiggsGenInfoTransformer(GenInfoVector, 30)",
-    "HHEta" : "HiggsGenInfoTransformer(GenInfoVector, 31)",
-    "HHPhi" : "HiggsGenInfoTransformer(GenInfoVector, 32)",
-    "HHM" : "HiggsGenInfoTransformer(GenInfoVector, 33)"
+    # "h_status" : "HiggsGenInfoTransformer(GenInfoVector, 0)",
+    # "tau_status" : "HiggsGenInfoTransformer(GenInfoVector, 1)",
+    # "b_status" : "HiggsGenInfoTransformer(GenInfoVector, 2)",
+    # "HbbE" : "HiggsGenInfoTransformer(GenInfoVector, 3)",
+    # "HbbPt" : "HiggsGenInfoTransformer(GenInfoVector, 4)",
+    # "HbbEta" : "HiggsGenInfoTransformer(GenInfoVector, 5)",
+    # "HbbPhi" : "HiggsGenInfoTransformer(GenInfoVector, 6)",
+    # "HbbM" : "HiggsGenInfoTransformer(GenInfoVector, 7)",
+    # "HtautauE" : "HiggsGenInfoTransformer(GenInfoVector, 8)",
+    # "HtautauPt" : "HiggsGenInfoTransformer(GenInfoVector, 9)",
+    # "HtautauEta" : "HiggsGenInfoTransformer(GenInfoVector, 10)",
+    # "HtautauPhi" : "HiggsGenInfoTransformer(GenInfoVector, 11)",
+    # "HtautauM" : "HiggsGenInfoTransformer(GenInfoVector, 12)",
+    # "Hb1E" : "HiggsGenInfoTransformer(GenInfoVector, 13)",
+    # "Hb1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 14)",
+    # "Hb1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 15)",
+    # "Hb1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 16)",
+    # "Hb2E" : "HiggsGenInfoTransformer(GenInfoVector, 17)",
+    # "Hb2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 18)",
+    # "Hb2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 19)",
+    # "Hb2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 20)",
+    # "Htau1E" : "HiggsGenInfoTransformer(GenInfoVector, 21)",
+    # "Htau1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 22)",
+    # "Htau1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 23)",
+    # "Htau1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 24)",
+    # "Htau2E" : "HiggsGenInfoTransformer(GenInfoVector, 25)",
+    # "Htau2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 26)",
+    # "Htau2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 27)",
+    # "Htau2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 28)",
+    # "HHE" : "HiggsGenInfoTransformer(GenInfoVector, 29)",
+    # "HHPt" : "HiggsGenInfoTransformer(GenInfoVector, 30)",
+    # "HHEta" : "HiggsGenInfoTransformer(GenInfoVector, 31)",
+    # "HHPhi" : "HiggsGenInfoTransformer(GenInfoVector, 32)",
+    # "HHM" : "HiggsGenInfoTransformer(GenInfoVector, 33)"
 }
 
 '''
@@ -113,22 +124,36 @@ weight = "1"
 filters = ["cut_leading_ak8jets_pT(leading_ak8jets_pT)"]
 
 # the quantities that we wanted to plot.
+# interest_quantities = { # variable name and binning
+    
+#     # "NAME" : [(" ", "NAME", NBINS, LOWER EDGE, UPPER EDGE), "YLABEL", "XLABEL",],
+#     "ak8jets_pT" : [(" ", "ak8jets_pT", 50, 0, 3000), "ak8 jets yields", "ak8jets_pT"],
+#     "leading_ak8jets_pT" : [(" ", "leading_ak8jets_pT", 50, 0, 3000), "Event yields", "leading_ak8jets_pT"],
+#     "bParticleNetTauAK8JetTags_probHtt" : [(" ", "bParticleNetTauAK8JetTags_probHtt", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtt"],
+#     "bParticleNetTauAK8JetTags_probHtm" : [(" ", "bParticleNetTauAK8JetTags_probHtm", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtm"],
+#     "bParticleNetTauAK8JetTags_probHte" : [(" ", "bParticleNetTauAK8JetTags_probHte", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHte"],
+#     "bParticleNetTauAK8JetTags_probHbb" : [(" ", "bParticleNetTauAK8JetTags_probHbb", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHbb"],
+#     "bParticleNetTauAK8JetTags_probHcc" : [(" ", "bParticleNetTauAK8JetTags_probHcc", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHcc"],
+#     "bParticleNetTauAK8JetTags_probHqq" : [(" ", "bParticleNetTauAK8JetTags_probHqq", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHqq"],
+#     "bParticleNetTauAK8JetTags_probHgg" : [(" ", "bParticleNetTauAK8JetTags_probHgg", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHgg"],
+#     "bParticleNetTauAK8JetTags_probQCD2hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD2hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD2hf"],
+#     "bParticleNetTauAK8JetTags_probQCD1hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD1hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD1hf"],
+#     "bParticleNetTauAK8JetTags_probQCD0hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD0hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD0hf"],
+#     "ak8jets_SoftDropMass"              : [(" ", "ak8jets_SoftDropMass", 50, 0, 2000), "ak8 jets yields", "ak8_PNet_probHtt"],
+#     "HttOverAll"                        : [(" ", "HttOverAll", 50, 0, 1), "ak8 jets yields", "HttOverAll"],
+#     "lheVPt"                            : [(" ", "lheVPt", 50, 0, 2000), "Events yields", "lheVPt"],
+# }
+
 interest_quantities = { # variable name and binning
     
     # "NAME" : [(" ", "NAME", NBINS, LOWER EDGE, UPPER EDGE), "YLABEL", "XLABEL",],
     "ak8jets_pT" : [(" ", "ak8jets_pT", 50, 0, 3000), "ak8 jets yields", "ak8jets_pT"],
     "leading_ak8jets_pT" : [(" ", "leading_ak8jets_pT", 50, 0, 3000), "Event yields", "leading_ak8jets_pT"],
-    "bParticleNetTauAK8JetTags_probHtt" : [(" ", "bParticleNetTauAK8JetTags_probHtt", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtt"],
-    "bParticleNetTauAK8JetTags_probHtm" : [(" ", "bParticleNetTauAK8JetTags_probHtm", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtm"],
-    "bParticleNetTauAK8JetTags_probHte" : [(" ", "bParticleNetTauAK8JetTags_probHte", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHte"],
-    "bParticleNetTauAK8JetTags_probHbb" : [(" ", "bParticleNetTauAK8JetTags_probHbb", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHbb"],
-    "bParticleNetTauAK8JetTags_probHcc" : [(" ", "bParticleNetTauAK8JetTags_probHcc", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHcc"],
-    "bParticleNetTauAK8JetTags_probHqq" : [(" ", "bParticleNetTauAK8JetTags_probHqq", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHqq"],
-    "bParticleNetTauAK8JetTags_probHgg" : [(" ", "bParticleNetTauAK8JetTags_probHgg", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHgg"],
-    "bParticleNetTauAK8JetTags_probQCD2hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD2hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD2hf"],
-    "bParticleNetTauAK8JetTags_probQCD1hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD1hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD1hf"],
-    "bParticleNetTauAK8JetTags_probQCD0hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD0hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD0hf"],
-    "ak8jets_SoftDropMass"              : [(" ", "ak8jets_SoftDropMass", 50, 0, 2000), "ak8 jets yields", "ak8_PNet_probHtt"],
-    "HttOverAll"                        : [(" ", "HttOverAll", 50, 0, 1), "ak8 jets yields", "HttOverAll"],
-    "lheVPt"                            : [(" ", "lheVPt", 50, 0, 2000), "Events yields", "lheVPt"],
+    "HttOverAll" : [(" ", "HttOverAll", 50, 0, 1), "ak8 jets yields", "HttOverAll"],
+    "HHM"        : [(" ", "HHM", 50, 0, 1500), "Events yields", "HH_mass"],
+    "HHPt"       : [(" ", "HHPt", 50, 0, 1500), "Events yields", "HH_pt"],
+    "HtautauM"   : [(" ", "HtautauM", 50, 124, 126), "Events yields", "Htautau_mass"],
+    "HbbM"       : [(" ", "HbbM", 50, 124, 126), "Events yields", "Hbb_mass"],
+    "HtautauPt"  : [(" ", "HtautauPt", 50, 0, 1500), "Events yields", "Htautau_pt"],
+    "HbbPt"      : [(" ", "HbbPt", 50, 0, 1500), "Events yields", "Hbb_pt"],
 }

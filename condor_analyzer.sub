@@ -1,10 +1,9 @@
 Universe = vanilla
 
-Location = '/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/'
+Location=/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/
 
 Executable = $(Location)/condor_analyzer.sh
-python scripts/analyzer.py -m 100 -s 123 -o $(Location)/slimmed_ntuple_test
-Arguments = 16 123 slimmed_ntuple_condor_test
+Arguments = 16 2 $(Location)/slimmed_ntuple_condor_test
 
 requirements = (OpSys == "LINUX")
 
@@ -18,12 +17,12 @@ when_to_transfer_output = ON_EXIT
 
 transfer_input_files = $(Location)/setup.sh, \
         $(Location)/configs/plot_config_bigNtuple.py, \
-        $(Location)/python/read_inpus.py, \
+        $(Location)/python/read_inputs.py, \
         $(Location)/python/rdf_utils.py, \
         $(Location)/scripts/analyzer.py, \
         $(Location)/interface/proc_big_Ntuple.h
         
-transfer_output_files = slimmed_ntuple_condor_test, AutoMake_Run2_2018_MC_BigNtuplewithWeight.json
+# transfer_output_files = slimmed_ntuple_condor_test
 
 # transfer_output_remaps = "output.root = /path/to/output/output_$(Cluster)_$(Process).root"
 

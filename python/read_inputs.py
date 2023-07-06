@@ -19,7 +19,7 @@ def get_all_file_paths(all_full_path_list, base_path):
 def build_default_fileset(base_path, regen, jsonName):
     filename = jsonName
     if os.path.exists(filename) and regen!=True:
-        print(f'{filename} existing, will use this file. Please update it with -re True')
+        # print(f'{filename} existing, will use this file. Please update it with -re True')
         with open(filename, "r") as f:
             fileset = json.load(f)
             return fileset
