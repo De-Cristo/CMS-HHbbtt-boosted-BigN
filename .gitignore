@@ -130,3 +130,7 @@ dmypy.json
 
 # Defined outputs
 AK8based_Out*
+# Output plots
+*.png
+*.pdf
+
