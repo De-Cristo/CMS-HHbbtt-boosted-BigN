@@ -45,64 +45,36 @@ import ROOT as R
 bigNtuple_header_path = "./interface/proc_big_Ntuple.h"
 R.gInterpreter.Declare('#include "{}"'.format(bigNtuple_header_path))
 
-# the variables that we are interested in from the large root files
-interested_variables = {
-    # "lheVPt", "aMCatNLOweight","MC_weight","EventNumber",
-    # "genpart_px","genpart_py","genpart_pz","genpart_e","genpart_flags",
-    # "genpart_pdg","genpart_status","genpart_TauGenDecayMode", "genpart_HZDecayMode", 
-    # "genpart_TauMothInd", "genpart_HMothInd", "genpart_TauDecayMode",
-    "ak8jets_px","ak8jets_py","ak8jets_pz","ak8jets_e","ak8jets_SoftDropMass", 
-    "bParticleNetTauAK8JetTags_probHtt","bParticleNetTauAK8JetTags_probHtm","bParticleNetTauAK8JetTags_probHte",
-    "bParticleNetTauAK8JetTags_probHbb","bParticleNetTauAK8JetTags_probHcc","bParticleNetTauAK8JetTags_probHqq",
-    "bParticleNetTauAK8JetTags_probHgg","bParticleNetTauAK8JetTags_probQCD2hf","bParticleNetTauAK8JetTags_probQCD1hf","bParticleNetTauAK8JetTags_probQCD0hf",
-}
+# ak8_interest_variables = ['ak8jets_SoftDropMass', 
+#                       'bParticleNetTauAK8JetTags_probHtt','bParticleNetTauAK8JetTags_probHtm','bParticleNetTauAK8JetTags_probHte',
+#                       'bParticleNetTauAK8JetTags_probHbb','bParticleNetTauAK8JetTags_probHcc', 'bParticleNetTauAK8JetTags_probHqq','bParticleNetTauAK8JetTags_probHgg',
+#                       'bParticleNetTauAK8JetTags_probQCD0hf','bParticleNetTauAK8JetTags_probQCD1hf','bParticleNetTauAK8JetTags_probQCD2hf',
+#                       'bParticleNetTauAK8JetTags_masscorr',
+#                      ]
 
-# the name and the definition of the new variables that can be calculated from basic vars.
+ak8_interest_variables = ['ak8jets_SoftDropMass', 'bParticleNetTauAK8JetTags_masscorr'
+                     ]
 
-new_defined_variables = {
-    "ak8jets_pT" : "calc_ak8jets_pT(ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e)",
-    
-    "leading_ak8jets_pT" : "calc_leading_ak8jet_pT(ak8jets_pT)",
-    
-    "HttOverAll" : "bParticleNetTauAK8JetTags_probHtt/(bParticleNetTauAK8JetTags_probHtt+bParticleNetTauAK8JetTags_probHtm+bParticleNetTauAK8JetTags_probHte+bParticleNetTauAK8JetTags_probQCD2hf+bParticleNetTauAK8JetTags_probQCD1hf+bParticleNetTauAK8JetTags_probQCD0hf)",
-    
-    # "GenInfoVector" : "HiggsGenInfoVector(EventNumber, genpart_px, genpart_py, genpart_pz, genpart_e, genpart_flags, genpart_pdg, genpart_TauMothInd, genpart_HMothInd, genpart_TauGenDecayMode, genpart_HZDecayMode)",
-    
-    # "h_status" : "HiggsGenInfoTransformer(GenInfoVector, 0)",
-    # "tau_status" : "HiggsGenInfoTransformer(GenInfoVector, 1)",
-    # "b_status" : "HiggsGenInfoTransformer(GenInfoVector, 2)",
-    # "HbbE" : "HiggsGenInfoTransformer(GenInfoVector, 3)",
-    # "HbbPt" : "HiggsGenInfoTransformer(GenInfoVector, 4)",
-    # "HbbEta" : "HiggsGenInfoTransformer(GenInfoVector, 5)",
-    # "HbbPhi" : "HiggsGenInfoTransformer(GenInfoVector, 6)",
-    # "HbbM" : "HiggsGenInfoTransformer(GenInfoVector, 7)",
-    # "HtautauE" : "HiggsGenInfoTransformer(GenInfoVector, 8)",
-    # "HtautauPt" : "HiggsGenInfoTransformer(GenInfoVector, 9)",
-    # "HtautauEta" : "HiggsGenInfoTransformer(GenInfoVector, 10)",
-    # "HtautauPhi" : "HiggsGenInfoTransformer(GenInfoVector, 11)",
-    # "HtautauM" : "HiggsGenInfoTransformer(GenInfoVector, 12)",
-    # "Hb1E" : "HiggsGenInfoTransformer(GenInfoVector, 13)",
-    # "Hb1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 14)",
-    # "Hb1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 15)",
-    # "Hb1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 16)",
-    # "Hb2E" : "HiggsGenInfoTransformer(GenInfoVector, 17)",
-    # "Hb2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 18)",
-    # "Hb2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 19)",
-    # "Hb2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 20)",
-    # "Htau1E" : "HiggsGenInfoTransformer(GenInfoVector, 21)",
-    # "Htau1Pt" : "HiggsGenInfoTransformer(GenInfoVector, 22)",
-    # "Htau1Eta" : "HiggsGenInfoTransformer(GenInfoVector, 23)",
-    # "Htau1Phi" : "HiggsGenInfoTransformer(GenInfoVector, 24)",
-    # "Htau2E" : "HiggsGenInfoTransformer(GenInfoVector, 25)",
-    # "Htau2Pt" : "HiggsGenInfoTransformer(GenInfoVector, 26)",
-    # "Htau2Eta" : "HiggsGenInfoTransformer(GenInfoVector, 27)",
-    # "Htau2Phi" : "HiggsGenInfoTransformer(GenInfoVector, 28)",
-    # "HHE" : "HiggsGenInfoTransformer(GenInfoVector, 29)",
-    # "HHPt" : "HiggsGenInfoTransformer(GenInfoVector, 30)",
-    # "HHEta" : "HiggsGenInfoTransformer(GenInfoVector, 31)",
-    # "HHPhi" : "HiggsGenInfoTransformer(GenInfoVector, 32)",
-    # "HHM" : "HiggsGenInfoTransformer(GenInfoVector, 33)"
-}
+lepton_interest_variables = ['dxy', 'dz']
+
+event_interest_variables = ['triggerbit']
+
+helper_variables = ['ak8jets_px','ak8jets_py','ak8jets_pz','ak8jets_e','ak8jets_SoftDropMass','bParticleNetTauAK8JetTags_masscorr',
+                    'genpart_px', 'genpart_py', 'genpart_pz', 'genpart_e', 'genpart_pdg', 'genpart_flags', 'genpart_TauGenDecayMode',
+                    'genjet_px', 'genjet_py', 'genjet_pz', 'genjet_e', 'genjet_partonFlavour', 'genjet_hadronFlavour',
+                    'genpart_HMothInd', 'genpart_ZMothInd', 'genpart_TauMothInd', 'genpart_WMothInd', 'genpart_bMothInd',
+                    'daughters_byDeepTau2017v2p1VSjetraw',
+                    
+                    'PDGIdDaughters', 'daughters_isTauMatched', 'daughters_px', 'daughters_py', 'daughters_pz', 'daughters_e',
+                    'daughters_muonID', 'daughters_typeOfMuon', 'daughters_iseleWP80', 'daughters_iseleWP90', 'dxy', 'dz',
+                    'daughters_iseleWPLoose', 'daughters_iseleNoIsoWP90',
+                    
+                    'aMCatNLOweight', 'triggerbit', 
+                    
+                    'bParticleNetTauAK8JetTags_probHtt','bParticleNetTauAK8JetTags_probHtm','bParticleNetTauAK8JetTags_probHte',
+                    'bParticleNetTauAK8JetTags_probHbb','bParticleNetTauAK8JetTags_probHcc', 'bParticleNetTauAK8JetTags_probHqq','bParticleNetTauAK8JetTags_probHgg',
+                    'bParticleNetTauAK8JetTags_probQCD0hf','bParticleNetTauAK8JetTags_probQCD1hf','bParticleNetTauAK8JetTags_probQCD2hf',                     
+                  ]
 
 '''
     GenInfoVector  --> [h_status, tau_status, b_status,
@@ -122,38 +94,3 @@ gentreeName = "gentree"
 weight = "1"
 
 filters = ["cut_leading_ak8jets_pT(leading_ak8jets_pT)"]
-
-# the quantities that we wanted to plot.
-# interest_quantities = { # variable name and binning
-    
-#     # "NAME" : [(" ", "NAME", NBINS, LOWER EDGE, UPPER EDGE), "YLABEL", "XLABEL",],
-#     "ak8jets_pT" : [(" ", "ak8jets_pT", 50, 0, 3000), "ak8 jets yields", "ak8jets_pT"],
-#     "leading_ak8jets_pT" : [(" ", "leading_ak8jets_pT", 50, 0, 3000), "Event yields", "leading_ak8jets_pT"],
-#     "bParticleNetTauAK8JetTags_probHtt" : [(" ", "bParticleNetTauAK8JetTags_probHtt", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtt"],
-#     "bParticleNetTauAK8JetTags_probHtm" : [(" ", "bParticleNetTauAK8JetTags_probHtm", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHtm"],
-#     "bParticleNetTauAK8JetTags_probHte" : [(" ", "bParticleNetTauAK8JetTags_probHte", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHte"],
-#     "bParticleNetTauAK8JetTags_probHbb" : [(" ", "bParticleNetTauAK8JetTags_probHbb", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHbb"],
-#     "bParticleNetTauAK8JetTags_probHcc" : [(" ", "bParticleNetTauAK8JetTags_probHcc", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHcc"],
-#     "bParticleNetTauAK8JetTags_probHqq" : [(" ", "bParticleNetTauAK8JetTags_probHqq", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHqq"],
-#     "bParticleNetTauAK8JetTags_probHgg" : [(" ", "bParticleNetTauAK8JetTags_probHgg", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probHgg"],
-#     "bParticleNetTauAK8JetTags_probQCD2hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD2hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD2hf"],
-#     "bParticleNetTauAK8JetTags_probQCD1hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD1hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD1hf"],
-#     "bParticleNetTauAK8JetTags_probQCD0hf" : [(" ", "bParticleNetTauAK8JetTags_probQCD0hf", 50, 0, 1), "ak8 jets yields", "ak8_PNet_probQCD0hf"],
-#     "ak8jets_SoftDropMass"              : [(" ", "ak8jets_SoftDropMass", 50, 0, 2000), "ak8 jets yields", "ak8_PNet_probHtt"],
-#     "HttOverAll"                        : [(" ", "HttOverAll", 50, 0, 1), "ak8 jets yields", "HttOverAll"],
-#     "lheVPt"                            : [(" ", "lheVPt", 50, 0, 2000), "Events yields", "lheVPt"],
-# }
-
-interest_quantities = { # variable name and binning
-    
-    # "NAME" : [(" ", "NAME", NBINS, LOWER EDGE, UPPER EDGE), "YLABEL", "XLABEL",],
-    "ak8jets_pT" : [(" ", "ak8jets_pT", 50, 0, 3000), "ak8 jets yields", "ak8jets_pT"],
-    "leading_ak8jets_pT" : [(" ", "leading_ak8jets_pT", 50, 0, 3000), "Event yields", "leading_ak8jets_pT"],
-    "HttOverAll" : [(" ", "HttOverAll", 50, 0, 1), "ak8 jets yields", "HttOverAll"],
-    "HHM"        : [(" ", "HHM", 50, 0, 1500), "Events yields", "HH_mass"],
-    "HHPt"       : [(" ", "HHPt", 50, 0, 1500), "Events yields", "HH_pt"],
-    "HtautauM"   : [(" ", "HtautauM", 50, 124, 126), "Events yields", "Htautau_mass"],
-    "HbbM"       : [(" ", "HbbM", 50, 124, 126), "Events yields", "Hbb_mass"],
-    "HtautauPt"  : [(" ", "HtautauPt", 50, 0, 1500), "Events yields", "Htautau_pt"],
-    "HbbPt"      : [(" ", "HbbPt", 50, 0, 1500), "Events yields", "Hbb_pt"],
-}

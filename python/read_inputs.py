@@ -42,17 +42,31 @@ def build_default_fileset(base_path, regen, jsonName):
         fileset['TTbarSemi'] = [[], 365.34, lumi, sumOfweights]
         fileset['TTbarDiLep'] = [[], 88.29, lumi, sumOfweights]
         fileset['TTbarInc'] = [[], 88.29+365.34+377.96, lumi, sumOfweights]
-        fileset['DY+Jets50To100'] = [[], 399, lumi, sumOfweights]
-        fileset['DY+Jets100To250'] = [[], 94, lumi, sumOfweights]
-        fileset['DY+Jets250To400'] = [[], 3.85, lumi, sumOfweights]
-        fileset['DY+Jets400To650'] = [[], 0.506, lumi, sumOfweights]
-        fileset['DY+Jets650ToInf'] = [[], 0.0473, lumi, sumOfweights]
-        fileset['DY+JetspTBinned'] = [[], 399+94+3.85+0.506+0.0473, lumi, sumOfweights]
-        fileset['DY+0J'] = [[], 5129, lumi, sumOfweights]
-        fileset['DY+1J'] = [[], 953, lumi, sumOfweights]
-        fileset['DY+2J'] = [[], 363, lumi, sumOfweights]
-        fileset['DY+JetsBinned'] = [[], 5129+953+363, lumi, sumOfweights]
-        fileset['SMHH'] = [[], 0.00134, lumi, sumOfweights]
+        
+        fileset['DY+Jets50To100'] = [[], 398.5, lumi, sumOfweights]
+        fileset['DY+Jets100To250'] = [[], 97.2, lumi, sumOfweights]
+        fileset['DY+Jets250To400'] = [[], 3.701, lumi, sumOfweights]
+        fileset['DY+Jets400To650'] = [[], 0.5086, lumi, sumOfweights]
+        fileset['DY+Jets650ToInf'] = [[], 0.04728, lumi, sumOfweights]
+        fileset['DY+JetspTBinned'] = [[], 398.5+97.2+3.701+0.5086+0.04728, lumi, sumOfweights]
+        
+        fileset['QCDHT50To100'] = [[], 187700000.0, lumi, sumOfweights]
+        fileset['QCDHT100To200'] = [[], 23500000.0, lumi, sumOfweights]
+        fileset['QCDHT200To300'] = [[], 1552000.0, lumi, sumOfweights]
+        fileset['QCDHT300To500'] = [[], 321100.0, lumi, sumOfweights]
+        fileset['QCDHT500To700'] = [[], 30250.0, lumi, sumOfweights]
+        fileset['QCDHT700To1000'] = [[], 6398.0, lumi, sumOfweights]
+        fileset['QCDHT1000To1500'] = [[], 1122.0, lumi, sumOfweights]
+        fileset['QCDHT1500To2000'] = [[], 109.4, lumi, sumOfweights]
+        fileset['QCDHT2000ToInf'] = [[], 21.74, lumi, sumOfweights]
+        fileset['QCDpTBinned'] = [[], 187700000.0+23500000.0+1552000.0+321100.0+30250.0+6398.0+1122.0+109.4+21.74, lumi, sumOfweights]
+        
+        # fileset['DY+0J'] = [[], 5129, lumi, sumOfweights]
+        # fileset['DY+1J'] = [[], 953, lumi, sumOfweights]
+        # fileset['DY+2J'] = [[], 363, lumi, sumOfweights]
+        # fileset['DY+JetsBinned'] = [[], 5129+953+363, lumi, sumOfweights]
+        
+        fileset['SMHH'] = [[], 0.01313, lumi, sumOfweights]
         
         # XS from HXSWG
         bbttBr = 0.073
@@ -90,25 +104,26 @@ def build_default_fileset(base_path, regen, jsonName):
             elif 'DYJetsToLL_LHEFilterPtZ-650ToInf' in _file:
                 fileset['DY+Jets650ToInf'][0].append(_file)
                 fileset['DY+JetspTBinned'][0].append(_file)
-            elif 'DYJetsToLL_' in _file and '0J' in _file:
-                fileset['DY+0J'][0].append(_file)
-                fileset['DY+JetsBinned'][0].append(_file)
-            elif 'DYJetsToLL_' in _file and '1J' in _file:
-                fileset['DY+1J'][0].append(_file)
-                fileset['DY+JetsBinned'][0].append(_file)
-            elif 'DYJetsToLL_' in _file and '2J' in _file:
-                fileset['DY+2J'][0].append(_file)
-                fileset['DY+JetsBinned'][0].append(_file)
+            elif ''
+            # elif 'DYJetsToLL_' in _file and '0J' in _file:
+            #     fileset['DY+0J'][0].append(_file)
+            #     fileset['DY+JetsBinned'][0].append(_file)
+            # elif 'DYJetsToLL_' in _file and '1J' in _file:
+            #     fileset['DY+1J'][0].append(_file)
+            #     fileset['DY+JetsBinned'][0].append(_file)
+            # elif 'DYJetsToLL_' in _file and '2J' in _file:
+            #     fileset['DY+2J'][0].append(_file)
+            #     fileset['DY+JetsBinned'][0].append(_file)
             elif 'GluGluToHHTo2B2Tau' in _file and 'SM' in _file:
                 fileset['SMHH'][0].append(_file)
-            elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH0' in _file:
-                fileset['HHkl0'][0].append(_file)
-            elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH1' in _file:
-                fileset['HHkl1'][0].append(_file)
-            elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH2p45' in _file:
-                fileset['HHkl2p45'][0].append(_file)
-            elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH5p0' in _file:
-                fileset['HHkl5p0'][0].append(_file)
+            # elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH0' in _file:
+            #     fileset['HHkl0'][0].append(_file)
+            # elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH1' in _file:
+            #     fileset['HHkl1'][0].append(_file)
+            # elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH2p45' in _file:
+            #     fileset['HHkl2p45'][0].append(_file)
+            # elif 'GluGluToHHTo2B2Tau' in _file and 'cHHH5p0' in _file:
+            #     fileset['HHkl5p0'][0].append(_file)
             elif 'VBFH' in _file:
                 fileset['VBFH'][0].append(_file)
             elif 'GluGluH' in _file:

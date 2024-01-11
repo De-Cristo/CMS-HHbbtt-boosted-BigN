@@ -13,349 +13,27 @@ from multiprocessing import Pool
 
 import gc
 
-def track_var_to_flat(arr, idx_low, idx_high):
-    return awkward.to_awkward0(awkward.Array( [[ ev[ka : kb] for ka, kb in zip(kidx_a, kidx_b)] for ev, kidx_a, kidx_b in zip(arr, idx_low, idx_high)])).flatten(axis=0)
+from python.ur_utils import \
+calc_obj_pT,calc_obj_pT_vec,calc_mass_corr,calc_obj_eta,calc_obj_phi,\
+calc_prob_Htt,check_bit,HLT_path_checker,calc_true_weight,lepton_type_checker,\
+good_AK8_checker, FatJet_Lepton_Matcher, process_event, match_ak8jets_with_tau, \
+channel_tagger, higgs_tagger
+
+from configs.plot_config_bigNtuple import ak8_interest_variables,helper_variables,event_interest_variables,lepton_interest_variables
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--InJson", "-i", dest='inJson', default='./AutoMake_Run2_2018_MC_BigNtuplewithWeight.json', type=str, help="Input json-file")
-parser.add_argument("--OutDir", "-o", dest='outDir', default='./AK8based_Out_625/', type=str, help="output direction")
+parser.add_argument("--OutDir", "-o", dest='outDir', default='./MixBased_Out_20231221/', type=str, help="output direction")
 args = parser.parse_args()
 
 base_dir = args.outDir
 os.makedirs(base_dir, exist_ok = True)
 
 # process_list = ['SMHH', 'DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf']
-# process_list = ['DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf']
-# process_list = ['VBFH', 'ggFH', 'TTbarHad', 'TTbarSemi', 'TTbarDiLep']
-process_list = ['SMHH', 'DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf', 'VBFH', 'ggFH', 'TTbarHad', 'TTbarSemi', 'TTbarDiLep']
+process_list = ['TTbarSemi']
+# process_list = ['VBFH', 'ggFH', 'TTbarHad', 'TTbarSemi'78%, 'TTbarDiLep']
+# process_list = ['SMHH', 'DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf', 'VBFH', 'ggFH', 'TTbarHad', 'TTbarSemi', 'TTbarDiLep']
 # process_list = ['SMHH']
-
-
-interest_variables = [
-                      'ak8jets_SoftDropMass',
-                      'bParticleNetTauAK8JetTags_probHtt','bParticleNetTauAK8JetTags_probHtm','bParticleNetTauAK8JetTags_probHte',
-                      'bParticleNetTauAK8JetTags_probHbb','bParticleNetTauAK8JetTags_probHcc', 'bParticleNetTauAK8JetTags_probHqq','bParticleNetTauAK8JetTags_probHgg',
-                      'bParticleNetTauAK8JetTags_probQCD0hf','bParticleNetTauAK8JetTags_probQCD1hf','bParticleNetTauAK8JetTags_probQCD2hf',
-                      'bParticleNetTauAK8JetTags_masscorr',
-                     ]
-
-# interest_variables = ['ak8jets_px']
-
-helper_variables = ['ak8jets_px','ak8jets_py','ak8jets_pz','ak8jets_e',
-                    'genpart_px', 'genpart_py', 'genpart_pz', 'genpart_e', 'genpart_pdg', 'genpart_flags', 'genpart_TauGenDecayMode',
-                    'genjet_px', 'genjet_py', 'genjet_pz', 'genjet_e', 'genjet_partonFlavour', 'genjet_hadronFlavour',
-                    'genpart_HMothInd', 'genpart_ZMothInd', 'daughters_byDeepTau2017v2p1VSjetraw',
-                    'PDGIdDaughters', 'daughters_isTauMatched', 'daughters_px', 'daughters_py', 'daughters_pz', 'daughters_e',
-                    'aMCatNLOweight'
-                   ]
-
-
-def calc_ak8jets_pT(ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e):
-    return R.Math.PxPyPzEVector(ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e).Pt()
-
-def calc_ak8jets_eta(ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e):
-    return R.Math.PxPyPzEVector(ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e).Eta()
-
-def ak8Jets_mass_corr(ak8jets_SoftDropMass, bParticleNetTauAK8JetTags_masscorr):
-    return ak8jets_SoftDropMass * bParticleNetTauAK8JetTags_masscorr
-
-def calc_prob_Htt(bParticleNetTauAK8JetTags_probHtt, bParticleNetTauAK8JetTags_probHtm, bParticleNetTauAK8JetTags_probHte,
-                  bParticleNetTauAK8JetTags_probQCD0hf, bParticleNetTauAK8JetTags_probQCD1hf, bParticleNetTauAK8JetTags_probQCD2hf
-                 ):
-    if (bParticleNetTauAK8JetTags_probHtt+bParticleNetTauAK8JetTags_probHtm+bParticleNetTauAK8JetTags_probHte+bParticleNetTauAK8JetTags_probQCD0hf+bParticleNetTauAK8JetTags_probQCD1hf+bParticleNetTauAK8JetTags_probQCD2hf) == 0:
-        return 0.
-    else:
-        return float(bParticleNetTauAK8JetTags_probHtt/(bParticleNetTauAK8JetTags_probHtt+bParticleNetTauAK8JetTags_probHtm+bParticleNetTauAK8JetTags_probHte+bParticleNetTauAK8JetTags_probQCD0hf+bParticleNetTauAK8JetTags_probQCD1hf+bParticleNetTauAK8JetTags_probQCD2hf))
-    
-def check_bit(number, bitpos):
-    res = number & (1 << bitpos)
-    return bool(res)
-
-def process_event(args):
-    # Unpack the arguments
-    evt_idx, ak8jets_px, ak8jets_py, ak8jets_pz, ak8jets_e, \
-    genpart_px, genpart_py, genpart_pz, genpart_e, \
-    genpart_pdg, genpart_flags, \
-    genjet_px, genjet_py, genjet_pz, genjet_e, \
-    genjet_partonFlavour, genjet_hadronFlavour, genpart_TauGenDecayMode,\
-    genpart_HMothInd, genpart_ZMothInd, \
-    PDGIdDaughters, daughters_isTauMatched, \
-    daughters_px, daughters_py, daughters_pz, daughters_e, daughters_byDeepTau2017v2p1VSjetraw = args
-
-    ak8_obj = R.TLorentzVector()
-    gen_obj = R.TLorentzVector()
-    genjet_obj = R.TLorentzVector()
-    daughter_obj = R.TLorentzVector()
-
-    sub_arr_tau_matched = []
-    sub_arr_emu_matched = []
-    sub_arr_hav_matched = []
-    sub_arr_hps_matched = []
-    sub_arr_hps_matched_test = []
-    
-    sub_arr_hps1_Pt = []
-    sub_arr_hps2_Pt = []
-    sub_arr_hps1_E = []
-    sub_arr_hps2_E = []
-    sub_arr_hps1_Eta = []
-    sub_arr_hps2_Eta = []
-    sub_arr_hps1_Phi = []
-    sub_arr_hps2_Phi = []
-    sub_arr_hps1_M = []
-    sub_arr_hps2_M = []
-    sub_arr_hps1_DeepTauVSJets = []
-    sub_arr_hps2_DeepTauVSJets = []
-
-    for ak8_obj_idx in range(len(ak8jets_px)):
-        ak8_obj.SetPxPyPzE(ak8jets_px[ak8_obj_idx], ak8jets_py[ak8_obj_idx], ak8jets_pz[ak8_obj_idx], ak8jets_e[ak8_obj_idx])
-
-        tau_matched = 0
-        for gen_obj_idx in range(len(genpart_px)):
-            gen_obj.SetPxPyPzE(genpart_px[gen_obj_idx], genpart_py[gen_obj_idx], genpart_pz[gen_obj_idx], genpart_e[gen_obj_idx])
-            # DeltaR < 0.8; obj is tau; genflag 13 == 1 is last copy; TauGenDecayMode == 2 is hadronic decay.
-            if ak8_obj.DeltaR(gen_obj) < 0.8 \
-                and abs(genpart_pdg[gen_obj_idx]) == 15 \
-                and (genpart_flags[gen_obj_idx] & (1 << 13)) \
-                and (genpart_TauGenDecayMode[gen_obj_idx] == 2):
-                tau_matched += 1
-                
-        emu_matched = 0
-        for gen_obj_idx in range(len(genpart_px)):
-            gen_obj.SetPxPyPzE(genpart_px[gen_obj_idx], genpart_py[gen_obj_idx], genpart_pz[gen_obj_idx], genpart_e[gen_obj_idx])
-            if ak8_obj.DeltaR(gen_obj) < 0.8 \
-                and (abs(genpart_pdg[gen_obj_idx]) == 11 or abs(genpart_pdg[gen_obj_idx]) == 13) \
-                and (genpart_flags[gen_obj_idx] & (1 << 13))\
-                and (genpart_HMothInd[gen_obj_idx] > -1 or genpart_ZMothInd[gen_obj_idx] > -1):
-                emu_matched += 1
-
-        hav_matched = 0
-        for genjet_obj_idx in range(len(genjet_px)):
-            genjet_obj.SetPxPyPzE(genjet_px[genjet_obj_idx], genjet_py[genjet_obj_idx], genjet_pz[genjet_obj_idx], genjet_e[genjet_obj_idx])
-            if ak8_obj.DeltaR(genjet_obj) < 0.8 and (abs(genjet_hadronFlavour[genjet_obj_idx]) == 4 or abs(genjet_hadronFlavour[genjet_obj_idx]) == 5):
-                hav_matched += 1
-                
-        hps_matched = 0
-        hps_matched_idx = []
-        hps_matched_pt = []
-        
-        hps1_Pt = -99.
-        hps2_Pt = -99.
-        hps1_E = -99.
-        hps2_E = -99.
-        hps1_Eta = -99.
-        hps2_Eta = -99.
-        hps1_Phi = -99.
-        hps2_Phi = -99.
-        hps1_M = -99.
-        hps2_M = -99.
-        hps1_DeepTauVSJets = -99.
-        hps2_DeepTauVSJets = -99
-        
-        for daughter_obj_idx in range(len(PDGIdDaughters)):
-            daughter_obj.SetPxPyPzE(daughters_px[daughter_obj_idx], daughters_py[daughter_obj_idx], daughters_pz[daughter_obj_idx], daughters_e[daughter_obj_idx])
-            # if ak8_obj.DeltaR(daughter_obj) < 0.8 and (abs(PDGIdDaughters[daughter_obj_idx])!=11 and abs(PDGIdDaughters[daughter_obj_idx])!=13):
-            if ak8_obj.DeltaR(daughter_obj) < 0.8 and (abs(PDGIdDaughters[daughter_obj_idx])==15):
-                hps_matched += 1
-                hps_matched_idx.append(daughter_obj_idx)
-                hps_matched_pt.append(daughter_obj.Pt())
-                
-        if hps_matched == 0:
-            pass
-        elif hps_matched == 1:
-            daughter_obj_idx = hps_matched_idx[0]
-            daughter_obj.SetPxPyPzE(daughters_px[daughter_obj_idx], daughters_py[daughter_obj_idx], daughters_pz[daughter_obj_idx], daughters_e[daughter_obj_idx])
-            hps1_Pt = daughter_obj.Pt()
-            hps1_E = daughter_obj.E()
-            hps1_Eta = daughter_obj.Eta()
-            hps1_Phi = daughter_obj.Phi()
-            hps1_M = daughter_obj.M()
-            hps1_DeepTauVSJets = daughters_byDeepTau2017v2p1VSjetraw[daughter_obj_idx]
-        else:                
-            sorted_lists = sorted(zip(hps_matched_pt, hps_matched_idx))
-            hps_matched_pt, hps_matched_idx = zip(*sorted_lists)
-            hps_matched_idx = list(reversed(hps_matched_idx))
-            hps_count = 0
-            for daughter_obj_idx in range(len(hps_matched_idx)):
-                daughter_obj.SetPxPyPzE(daughters_px[daughter_obj_idx], daughters_py[daughter_obj_idx], daughters_pz[daughter_obj_idx], daughters_e[daughter_obj_idx])
-                hps_count += 1
-                if hps_count == 1:
-                    hps1_Pt = daughter_obj.Pt()
-                    hps1_E = daughter_obj.E()
-                    hps1_Eta = daughter_obj.Eta()
-                    hps1_Phi = daughter_obj.Phi()
-                    hps1_M = daughter_obj.M()
-                    hps1_DeepTauVSJets = daughters_byDeepTau2017v2p1VSjetraw[daughter_obj_idx]
-                elif hps_count == 2:
-                    hps2_Pt = daughter_obj.Pt()
-                    hps2_E = daughter_obj.E()
-                    hps2_Eta = daughter_obj.Eta()
-                    hps2_Phi = daughter_obj.Phi()
-                    hps2_M = daughter_obj.M()
-                    hps2_DeepTauVSJets = daughters_byDeepTau2017v2p1VSjetraw[daughter_obj_idx]
-                else:
-                    break
-
-        
-        if hps_matched == 1:
-            hps1_Pt = daughter_obj.Pt()
-            hps1_E = daughter_obj.E()
-            hps1_Eta = daughter_obj.Eta()
-            hps1_Phi = daughter_obj.Phi()
-            hps1_M = daughter_obj.M()
-            hps1_DeepTauVSJets = daughters_byDeepTau2017v2p1VSjetraw[daughter_obj_idx]
-        if hps_matched == 2:
-            hps2_Pt = daughter_obj.Pt()
-            hps2_E = daughter_obj.E()
-            hps2_Eta = daughter_obj.Eta()
-            hps2_Phi = daughter_obj.Phi()
-            hps2_M = daughter_obj.M()
-            hps2_DeepTauVSJets = daughters_byDeepTau2017v2p1VSjetraw[daughter_obj_idx]
-        
-        hps_matched_test = 0
-        for daughter_obj_idx in range(len(daughters_isTauMatched)):
-            daughter_obj.SetPxPyPzE(daughters_px[daughter_obj_idx], daughters_py[daughter_obj_idx], daughters_pz[daughter_obj_idx], daughters_e[daughter_obj_idx])
-            if ak8_obj.DeltaR(daughter_obj) < 0.8 and (daughters_isTauMatched[daughter_obj_idx]==1) :
-                hps_matched_test += 1
-
-        sub_arr_tau_matched.append(tau_matched)
-        sub_arr_emu_matched.append(emu_matched)
-        sub_arr_hav_matched.append(hav_matched)
-        sub_arr_hps_matched.append(hps_matched)
-        sub_arr_hps_matched_test.append(hps_matched_test)
-        
-        sub_arr_hps1_Pt.append(hps1_Pt)
-        sub_arr_hps1_E.append(hps1_E)
-        sub_arr_hps1_Eta.append(hps1_Eta)
-        sub_arr_hps1_Phi.append(hps1_Phi)
-        sub_arr_hps1_M.append(hps1_M)
-        sub_arr_hps1_DeepTauVSJets.append(hps1_DeepTauVSJets)
-        sub_arr_hps2_Pt.append(hps2_Pt)
-        sub_arr_hps2_E.append(hps2_E)
-        sub_arr_hps2_Eta.append(hps2_Eta)
-        sub_arr_hps2_Phi.append(hps2_Phi)
-        sub_arr_hps2_M.append(hps2_M)
-        sub_arr_hps2_DeepTauVSJets.append(hps2_DeepTauVSJets)
-        
-    return sub_arr_tau_matched, sub_arr_emu_matched, sub_arr_hav_matched, sub_arr_hps_matched, sub_arr_hps_matched_test, \
-           sub_arr_hps1_Pt, sub_arr_hps1_E, sub_arr_hps1_Eta, sub_arr_hps1_Phi, sub_arr_hps1_M, sub_arr_hps1_DeepTauVSJets, \
-           sub_arr_hps2_Pt, sub_arr_hps2_E, sub_arr_hps2_Eta, sub_arr_hps2_Phi, sub_arr_hps2_M, sub_arr_hps2_DeepTauVSJets
-
-def match_ak8jets_with_tau(ARR_ak8jets_px, ARR_ak8jets_py, ARR_ak8jets_pz, ARR_ak8jets_e, \
-                           ARR_genpart_px, ARR_genpart_py, ARR_genpart_pz, ARR_genpart_e, \
-                           ARR_genpart_pdg, ARR_genpart_flags, \
-                           ARR_genjet_px, ARR_genjet_py, ARR_genjet_pz, ARR_genjet_e, \
-                           ARR_genjet_partonFlavour, ARR_genjet_hadronFlavour, ARR_genpart_TauGenDecayMode, \
-                           ARR_genpart_HMothInd, ARR_genpart_ZMothInd, \
-                           ARR_PDGIdDaughters, ARR_daughters_isTauMatched, \
-                           ARR_daughters_px, ARR_daughters_py, ARR_daughters_pz, ARR_daughters_e, ARR_daughters_byDeepTau2017v2p1VSjetraw
-                          ):
-    num_events = len(ARR_ak8jets_px)
-    # print('there are {} events'.format(num_events))
-
-    arr_tau_matched = []
-    arr_emu_matched = []
-    arr_hav_matched = []
-    arr_hps_matched = []
-    arr_hps_matched_test = []
-    
-    arr_hps1_Pt = []
-    arr_hps1_E = []
-    arr_hps1_Eta = []
-    arr_hps1_Phi = []
-    arr_hps1_M = []
-    arr_hps1_DeepTauVSJets = []
-    arr_hps2_Pt = []
-    arr_hps2_E = []
-    arr_hps2_Eta = []
-    arr_hps2_Phi = []
-    arr_hps2_M = []
-    arr_hps2_DeepTauVSJets = []
-    
-    # Create a list of arguments for each event
-    event_args = []
-    for evt_idx in range(num_events):
-        # Create a list of arguments for each event
-        event_args.append((evt_idx,
-                           ARR_ak8jets_px[evt_idx],
-                           ARR_ak8jets_py[evt_idx],
-                           ARR_ak8jets_pz[evt_idx],
-                           ARR_ak8jets_e[evt_idx],
-                           ARR_genpart_px[evt_idx],
-                           ARR_genpart_py[evt_idx],
-                           ARR_genpart_pz[evt_idx],
-                           ARR_genpart_e[evt_idx],
-                           ARR_genpart_pdg[evt_idx],
-                           ARR_genpart_flags[evt_idx],
-                           ARR_genjet_px[evt_idx],
-                           ARR_genjet_py[evt_idx],
-                           ARR_genjet_pz[evt_idx],
-                           ARR_genjet_e[evt_idx],
-                           ARR_genjet_partonFlavour[evt_idx],
-                           ARR_genjet_hadronFlavour[evt_idx],
-                           ARR_genpart_TauGenDecayMode[evt_idx],
-                           ARR_genpart_HMothInd[evt_idx],
-                           ARR_genpart_ZMothInd[evt_idx],
-                           ARR_PDGIdDaughters[evt_idx],
-                           ARR_daughters_isTauMatched[evt_idx],
-                           ARR_daughters_px[evt_idx],
-                           ARR_daughters_py[evt_idx],
-                           ARR_daughters_pz[evt_idx],
-                           ARR_daughters_e[evt_idx],
-                           ARR_daughters_byDeepTau2017v2p1VSjetraw[evt_idx]
-                          ),
-                         )
-
-    # Process events in parallel using multithreading
-    # with Pool(10) as pool:
-    #     results = list(tqdm(pool.imap(process_event, event_args), total=num_events))
-    
-    results = []
-    for _args in event_args:
-        results.append(process_event(_args))
-    
-    # Unpack the results
-    for res in results:
-        arr_tau_matched.append(res[0])
-        arr_emu_matched.append(res[1])
-        arr_hav_matched.append(res[2])
-        arr_hps_matched.append(res[3])
-        arr_hps_matched_test.append(res[4])
-        arr_hps1_Pt.append(res[5])
-        arr_hps1_E.append(res[6])
-        arr_hps1_Eta.append(res[7])
-        arr_hps1_Phi.append(res[8])
-        arr_hps1_M.append(res[9])
-        arr_hps1_DeepTauVSJets.append(res[10])
-        arr_hps2_Pt.append(res[11])
-        arr_hps2_E.append(res[12])
-        arr_hps2_Eta.append(res[13])
-        arr_hps2_Phi.append(res[14])
-        arr_hps2_M.append(res[15])
-        arr_hps2_DeepTauVSJets.append(res[16])
-
-    return awkward.to_awkward0(awkward.Array(arr_tau_matched)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_emu_matched)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hav_matched)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps_matched)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps_matched_test)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_Pt)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_E)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_Eta)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_Phi)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_M)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps1_DeepTauVSJets)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_Pt)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_E)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_Eta)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_Phi)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_M)).flatten(axis=0), \
-           awkward.to_awkward0(awkward.Array(arr_hps2_DeepTauVSJets)).flatten(axis=0)
-
-def calc_true_weight(ARR_aMCatNLOweight, ARR_ak8jets_px, XS, lumi, sumOfweights):
-    arr_weights = ARR_aMCatNLOweight * XS * lumi / sumOfweights
-    arr_weights_flat = np.concatenate( np.array([np.repeat(weight, len(ak8jet)) for weight, ak8jet in zip(arr_weights, ARR_ak8jets_px)], dtype=object) )
-    
-    return arr_weights_flat
 
 with open(args.inJson, 'r') as f:
     data = f.read()
@@ -367,83 +45,292 @@ for process in process_list:
     
     def process_file(file):
         with u.open(file, num_workers = 4)["HTauTauTree"]["HTauTauTree"] as event_tree:
-            branch_dict = {}
-            branch_dict_helper = {}
-            ak8_file = u.recreate( os.path.join( base_dir+'/'+process+'/', "{}".format(file.split("/")[-1]) ), compression=u.ZLIB(4) )
-            for variable in interest_variables:
-                arr = awkward.to_awkward0( awkward.Array(event_tree[variable].array()) ).flatten(axis=0)
-                branch_dict[variable] = arr
+            event_branch_dict = {}
+            event_helper_branch_dict = {}
+            lepton_branch_dict = {}
+            lepton_helper_branch_dict = {}
+            ak8_branch_dict = {}
+            ak8_helper_branch_dict = {}
+        
+            out_file = u.recreate( os.path.join( base_dir+'/'+process+'/', "{}".format(file.split("/")[-1]) ), compression=u.ZLIB(4) )
+                
+            ak8_jagged_arr = awkward.Array(event_tree['ak8jets_px'].array())
+            lepton_jagged_arr = awkward.Array(event_tree['PDGIdDaughters'].array())
+            
+            list_ak8evtidx = [ [i]*len(ak8_jagged_arr[i]) for i in range(len(ak8_jagged_arr)) ]
+            list_lepevtidx = [ [i]*len(lepton_jagged_arr[i]) for i in range(len(lepton_jagged_arr)) ]
+            list_ak8idx = [ i for i in range(len(awkward.to_awkward0(ak8_jagged_arr).flatten())) ]
+            list_lepidx = [ i for i in range(len(awkward.to_awkward0(lepton_jagged_arr).flatten())) ]
+            list_evtidx = [ i for i in range(len(ak8_jagged_arr)) ]
+            list_evtnlep = [ len(lepton_jagged_arr[i]) for i in range(len(lepton_jagged_arr)) ]
+            list_evtnak8 = [ len(ak8_jagged_arr[i]) for i in range(len(ak8_jagged_arr)) ]
+            
+            event_branch_dict['evt_index'] = awkward.Array(list_evtidx)
+            event_branch_dict['evtnlep'] = awkward.Array(list_evtnlep)
+            event_branch_dict['evtnak8'] = awkward.Array(list_evtnak8)
+            
+            lepton_branch_dict['lep_evt_index'] = awkward.to_awkward0( awkward.Array(list_lepevtidx) ).flatten()
+            lepton_branch_dict['lep_index'] = awkward.Array(list_lepidx)
+            
+            ak8_branch_dict['ak8_evt_index'] = awkward.to_awkward0( awkward.Array(list_ak8evtidx) ).flatten()
+            ak8_branch_dict['ak8_index'] = awkward.Array(list_ak8idx)
+            
+            for variable in ak8_interest_variables:
+                arr = awkward.to_awkward0( awkward.Array(event_tree[variable].array()) ).flatten()
+                ak8_branch_dict[variable] = arr
+                
+            for variable in lepton_interest_variables:
+                arr = awkward.to_awkward0( awkward.Array(event_tree[variable].array()) ).flatten()
+                lepton_branch_dict[variable] = arr
+                
+            for variable in event_interest_variables:
+                arr = awkward.to_awkward0( awkward.Array(event_tree[variable].array()) )
+                event_branch_dict[variable] = arr
 
             for variable in helper_variables:
-                arr = awkward.to_awkward0( awkward.Array(event_tree[variable].array()) )
-                branch_dict_helper[variable] = arr
+                arr = awkward.Array(event_tree[variable].array())
+                event_helper_branch_dict[variable] = awkward.to_awkward0(arr)
+                lepton_helper_branch_dict[variable] = awkward.to_awkward0(arr)
+                ak8_helper_branch_dict[variable] = awkward.to_awkward0(arr)
                 
-            vectorized_function = np.vectorize(calc_ak8jets_pT)
-            result = vectorized_function(branch_dict_helper['ak8jets_px'].flatten(axis=0), branch_dict_helper['ak8jets_py'].flatten(axis=0), branch_dict_helper['ak8jets_pz'].flatten(axis=0), branch_dict_helper['ak8jets_e'].flatten(axis=0))
-            branch_dict['ak8jets_Pt'] = result
+            ### calculating basic event based parameters
+            # for parameter PassHLTPath [0, 0, 0], if 1 means pass the HLT path. the order is [Muon Path, Electron Path, Hadronic(Jet/Met) Path]
+            vectorized_function = np.vectorize(HLT_path_checker)
+            result = vectorized_function(
+                event_helper_branch_dict['triggerbit'])
+            event_branch_dict['PassMuonPath'], event_branch_dict['PassElectronPath'], event_branch_dict['PassHadronicPath'] = result
             
-            vectorized_function = np.vectorize(calc_ak8jets_eta)
-            result = vectorized_function(branch_dict_helper['ak8jets_px'].flatten(axis=0), branch_dict_helper['ak8jets_py'].flatten(axis=0), branch_dict_helper['ak8jets_pz'].flatten(axis=0), branch_dict_helper['ak8jets_e'].flatten(axis=0))
-            branch_dict['ak8jets_Eta'] = result
-
-            vectorized_function = np.vectorize(ak8Jets_mass_corr)
-            result = vectorized_function(branch_dict['ak8jets_SoftDropMass'], branch_dict['bParticleNetTauAK8JetTags_masscorr'])
-            branch_dict['ak8jets_Mass'] = result
-            
-            vectorized_function = np.vectorize(calc_prob_Htt)
-            result = vectorized_function(branch_dict['bParticleNetTauAK8JetTags_probHtt'], branch_dict['bParticleNetTauAK8JetTags_probHtm'], branch_dict['bParticleNetTauAK8JetTags_probHte'],branch_dict['bParticleNetTauAK8JetTags_probQCD0hf'],branch_dict['bParticleNetTauAK8JetTags_probQCD1hf'],branch_dict['bParticleNetTauAK8JetTags_probQCD2hf'])
-            branch_dict['ak8jets_probHtt'] = result
-
-            branch_dict['match_gen_tau'], \
-            branch_dict['match_gen_emu'], \
-            branch_dict['match_gen_hav'], \
-            branch_dict['match_hps_tau'], \
-            branch_dict['match_hps_tau_test'],\
-            branch_dict['hps_tau1_Pt'],\
-            branch_dict['hps_tau1_E'],\
-            branch_dict['hps_tau1_Eta'],\
-            branch_dict['hps_tau1_Phi'],\
-            branch_dict['hps_tau1_M'],\
-            branch_dict['hps_tau1_DeepTauVSJets'],\
-            branch_dict['hps_tau2_Pt'],\
-            branch_dict['hps_tau2_E'],\
-            branch_dict['hps_tau2_Eta'],\
-            branch_dict['hps_tau2_Phi'],\
-            branch_dict['hps_tau2_M'], \
-            branch_dict['hps_tau2_DeepTauVSJets'] = match_ak8jets_with_tau( \
-                    branch_dict_helper['ak8jets_px'], branch_dict_helper['ak8jets_py'], branch_dict_helper['ak8jets_pz'], branch_dict_helper['ak8jets_e'], \
-                    branch_dict_helper['genpart_px'], branch_dict_helper['genpart_py'], branch_dict_helper['genpart_pz'], branch_dict_helper['genpart_e'], \
-                    branch_dict_helper['genpart_pdg'], branch_dict_helper['genpart_flags'],\
-                    branch_dict_helper['genjet_px'], branch_dict_helper['genjet_py'], branch_dict_helper['genjet_pz'], branch_dict_helper['genjet_e'], \
-                    branch_dict_helper['genjet_partonFlavour'], branch_dict_helper['genjet_hadronFlavour'], branch_dict_helper['genpart_TauGenDecayMode'],\
-                    branch_dict_helper['genpart_HMothInd'], branch_dict_helper['genpart_ZMothInd'], \
-                    branch_dict_helper['PDGIdDaughters'], branch_dict_helper['daughters_isTauMatched'], \
-                    branch_dict_helper['daughters_px'], branch_dict_helper['daughters_py'], branch_dict_helper['daughters_pz'], branch_dict_helper['daughters_e'], \
-                    branch_dict_helper['daughters_byDeepTau2017v2p1VSjetraw'],
-                )
-                        
             XS = fileset[process][1]
             lumi = fileset[process][2]
             sumOfweights = fileset[process][3]
-            branch_dict['true_weight'] = calc_true_weight(branch_dict_helper['aMCatNLOweight'], branch_dict_helper['ak8jets_px'], XS, lumi, sumOfweights)
-
-            ak8_file["ak8tree"] = branch_dict
-            # ak8_file["ak8tree"].show()
-
+            event_branch_dict['Weight'] = calc_true_weight(event_helper_branch_dict['aMCatNLOweight'], XS, lumi, sumOfweights)
+            
+            ### calculating Lepton parameters
+            vectorized_function = np.vectorize(calc_obj_pT)
+            result = vectorized_function(
+                lepton_helper_branch_dict['daughters_px'].flatten(),
+                lepton_helper_branch_dict['daughters_py'].flatten(),
+                lepton_helper_branch_dict['daughters_pz'].flatten(),
+                lepton_helper_branch_dict['daughters_e'].flatten())
+            lepton_branch_dict['Lepton_Pt'] = result
+            
+            vectorized_function = np.vectorize(calc_obj_eta)
+            result = vectorized_function(
+                lepton_helper_branch_dict['daughters_px'].flatten(), 
+                lepton_helper_branch_dict['daughters_py'].flatten(), 
+                lepton_helper_branch_dict['daughters_pz'].flatten(), 
+                lepton_helper_branch_dict['daughters_e'].flatten())
+            lepton_branch_dict['Lepton_Eta'] = result
+            
+            vectorized_function = np.vectorize(calc_obj_phi)
+            result = vectorized_function(
+                lepton_helper_branch_dict['daughters_px'].flatten(),
+                lepton_helper_branch_dict['daughters_py'].flatten(),
+                lepton_helper_branch_dict['daughters_pz'].flatten(),
+                lepton_helper_branch_dict['daughters_e'].flatten())
+            lepton_branch_dict['Lepton_Phi'] = result
+            
+            vectorized_function = np.vectorize(lepton_type_checker)
+            result = vectorized_function(
+                lepton_branch_dict['Lepton_Pt'],
+                lepton_branch_dict['Lepton_Eta'],
+                lepton_helper_branch_dict['dxy'].flatten(),
+                lepton_helper_branch_dict['dz'].flatten(),
+                lepton_helper_branch_dict['daughters_muonID'].flatten(),
+                lepton_helper_branch_dict['daughters_iseleWP90'].flatten(),
+                lepton_helper_branch_dict['daughters_iseleNoIsoWP90'].flatten())
+            lepton_branch_dict['GoodMuon'], lepton_branch_dict['VetoMuon'], lepton_branch_dict['GoodElectron'], lepton_branch_dict['VetoElectron'] = result
+            
+            ### calculating AK8Jets parameters
+            vectorized_function = np.vectorize(calc_obj_pT)
+            result = vectorized_function(
+                ak8_helper_branch_dict['ak8jets_px'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_py'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_pz'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_e'].flatten())
+            ak8_branch_dict['AK8jets_Pt'] = result
+            
+            vectorized_function = np.vectorize(calc_obj_eta)
+            result = vectorized_function(
+                ak8_helper_branch_dict['ak8jets_px'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_py'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_pz'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_e'].flatten())
+            ak8_branch_dict['AK8jets_Eta'] = result
+            
+            vectorized_function = np.vectorize(good_AK8_checker)
+            result = vectorized_function(
+                 ak8_branch_dict['AK8jets_Pt'],
+                 ak8_branch_dict['AK8jets_Eta'])
+            ak8_branch_dict['AK8jets_Kin_Good'] = result
+            
+            ak8_branch_dict['AK8jets_GoodElectron_Matched'], \
+            ak8_branch_dict['AK8jets_GoodMuon_Matched'], \
+            ak8_branch_dict['AK8jets_GoodElectron_Matched_Ele_ID'], \
+            ak8_branch_dict['AK8jets_GoodMuon_Matched_Mu_ID'] = FatJet_Lepton_Matcher(
+                ak8_branch_dict['ak8_index'],
+                ak8_branch_dict['ak8_evt_index'],
+                ak8_branch_dict['AK8jets_Kin_Good'],
+                ak8_helper_branch_dict['ak8jets_px'].flatten(),
+                ak8_helper_branch_dict['ak8jets_py'].flatten(),
+                ak8_helper_branch_dict['ak8jets_pz'].flatten(),
+                ak8_helper_branch_dict['ak8jets_e'].flatten(),
+                lepton_branch_dict['lep_index'],
+                lepton_branch_dict['lep_evt_index'],
+                lepton_helper_branch_dict['daughters_px'].flatten(),
+                lepton_helper_branch_dict['daughters_py'].flatten(),
+                lepton_helper_branch_dict['daughters_pz'].flatten(),
+                lepton_helper_branch_dict['daughters_e'].flatten(),
+                lepton_branch_dict['GoodElectron'],
+                lepton_branch_dict['GoodMuon'],
+            )
+            
+            vectorized_function = np.vectorize(calc_obj_phi)
+            result = vectorized_function(
+                ak8_helper_branch_dict['ak8jets_px'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_py'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_pz'].flatten(), 
+                ak8_helper_branch_dict['ak8jets_e'].flatten())
+            ak8_branch_dict['AK8jets_Phi'] = result
+            
+            vectorized_function = np.vectorize(calc_mass_corr)
+            result = vectorized_function(
+                ak8_helper_branch_dict['ak8jets_SoftDropMass'].flatten(), 
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_masscorr'].flatten())
+            ak8_branch_dict['AK8jets_Mass'] = result
+            
+            # ak8jets_probQCD0hf is ak8jets_PNet_score my typo ONLY in 0820 dR0p8 version
+            ak8_branch_dict['AK8jets_probHttOverQCD'],\
+            ak8_branch_dict['AK8jets_probHtl'],\
+            ak8_branch_dict['AK8jets_probHttOverLepton'],\
+            ak8_branch_dict['AK8jets_PNet_score'],\
+            ak8_branch_dict['AK8jets_probHbb'], \
+            ak8_branch_dict['AK8jets_9Xbb'], \
+            ak8_branch_dict['AK8jets_9Xtt'], \
+            ak8_branch_dict['AK8jets_9Xtm'], \
+            ak8_branch_dict['AK8jets_9Xte'] = calc_prob_Htt( \
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHtt'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHtm'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHte'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probQCD0hf'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probQCD1hf'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probQCD2hf'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHbb'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHcc'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHqq'],\
+                ak8_helper_branch_dict['bParticleNetTauAK8JetTags_probHgg'])
+            
+            ak8_branch_dict['Match_gen_tau'], \
+            ak8_branch_dict['Match_gen_taus_sign'], \
+            ak8_branch_dict['Match_gen_taus_dR'], \
+            ak8_branch_dict['Match_gen_tau1_Mother'], \
+            ak8_branch_dict['Match_gen_tau2_Mother'], \
+            ak8_branch_dict['Match_gen_emu'], \
+            ak8_branch_dict['Match_gen_hav'], \
+            ak8_branch_dict['Match_hps_tau'], \
+            ak8_branch_dict['Hps_tau1_Pt'],\
+            ak8_branch_dict['Hps_tau1_E'],\
+            ak8_branch_dict['Hps_tau1_Eta'],\
+            ak8_branch_dict['Hps_tau1_Phi'],\
+            ak8_branch_dict['Hps_tau1_M'],\
+            ak8_branch_dict['Hps_tau1_DeepTauVSJets'],\
+            ak8_branch_dict['Hps_tau2_Pt'],\
+            ak8_branch_dict['Hps_tau2_E'],\
+            ak8_branch_dict['Hps_tau2_Eta'],\
+            ak8_branch_dict['Hps_tau2_Phi'],\
+            ak8_branch_dict['Hps_tau2_M'], \
+            ak8_branch_dict['Hps_tau2_DeepTauVSJets'] = match_ak8jets_with_tau( \
+                    ak8_helper_branch_dict['ak8jets_px'], ak8_helper_branch_dict['ak8jets_py'], \
+                    ak8_helper_branch_dict['ak8jets_pz'], ak8_helper_branch_dict['ak8jets_e'], \
+                    ak8_helper_branch_dict['genpart_px'], ak8_helper_branch_dict['genpart_py'], \
+                    ak8_helper_branch_dict['genpart_pz'], ak8_helper_branch_dict['genpart_e'], \
+                    ak8_helper_branch_dict['genpart_pdg'], ak8_helper_branch_dict['genpart_flags'],\
+                    ak8_helper_branch_dict['genjet_px'], ak8_helper_branch_dict['genjet_py'], \
+                    ak8_helper_branch_dict['genjet_pz'], ak8_helper_branch_dict['genjet_e'], \
+                    ak8_helper_branch_dict['genjet_partonFlavour'], ak8_helper_branch_dict['genjet_hadronFlavour'], \
+                    ak8_helper_branch_dict['genpart_TauGenDecayMode'], ak8_helper_branch_dict['genpart_HMothInd'], \
+                    ak8_helper_branch_dict['genpart_ZMothInd'], ak8_helper_branch_dict['genpart_TauMothInd'], \
+                    ak8_helper_branch_dict['genpart_WMothInd'], ak8_helper_branch_dict['genpart_bMothInd'], \
+                    ak8_helper_branch_dict['PDGIdDaughters'], ak8_helper_branch_dict['daughters_isTauMatched'], \
+                    ak8_helper_branch_dict['daughters_px'], ak8_helper_branch_dict['daughters_py'], \
+                    ak8_helper_branch_dict['daughters_pz'], ak8_helper_branch_dict['daughters_e'], \
+                    ak8_helper_branch_dict['daughters_byDeepTau2017v2p1VSjetraw']
+                )
+            
+            ### back to add some tags to the events
+            event_branch_dict['IsMuonTau'], \
+            event_branch_dict['IsElectronTau'], \
+            event_branch_dict['IsTauTau'] = channel_tagger(
+                ak8_branch_dict['ak8_index'],
+                ak8_branch_dict['ak8_evt_index'],
+                ak8_branch_dict['AK8jets_Kin_Good'],
+                ak8_branch_dict['AK8jets_GoodElectron_Matched'],
+                ak8_branch_dict['AK8jets_GoodElectron_Matched_Ele_ID'],
+                ak8_branch_dict['AK8jets_GoodMuon_Matched'],
+                ak8_branch_dict['AK8jets_GoodMuon_Matched_Mu_ID'],
+                lepton_branch_dict['lep_index'],
+                lepton_branch_dict['lep_evt_index'],
+                lepton_branch_dict['GoodElectron'],
+                lepton_branch_dict['GoodMuon'],
+                lepton_branch_dict['VetoElectron'],
+                lepton_branch_dict['VetoMuon'],
+                event_branch_dict['PassMuonPath'],
+                event_branch_dict['PassElectronPath'],
+                event_branch_dict['PassHadronicPath']
+            )
+            
+            event_branch_dict['Hbb_jet_index'], \
+            event_branch_dict['Hbb_mass'], \
+            event_branch_dict['Hbb_pt'], \
+            event_branch_dict['Hbb_eta'], \
+            event_branch_dict['Hbb_phi'], \
+            event_branch_dict['Hbb_9Xbb'], \
+            event_branch_dict['Htx_jet_index'], \
+            event_branch_dict['Htx_mass'], \
+            event_branch_dict['Htx_pt'], \
+            event_branch_dict['Htx_eta'], \
+            event_branch_dict['Htx_phi'], \
+            event_branch_dict['Htx_9Xtx'], \
+            event_branch_dict['Hbb_Htx_dR'], \
+            event_branch_dict['Hbb_Htx_dPhi'], \
+            event_branch_dict['Hbb_Htx_distinct'], \
+            event_branch_dict['Hbb_T_Htx_T'], \
+            event_branch_dict['Hbb_T_Htx_L'], \
+            event_branch_dict['Hbb_L_Htx_T'], \
+            event_branch_dict['Hbb_L_Htx_L'] = higgs_tagger(
+                event_branch_dict['IsMuonTau'],
+                event_branch_dict['IsElectronTau'],
+                event_branch_dict['IsTauTau'],
+                ak8_branch_dict['ak8_index'],
+                ak8_branch_dict['ak8_evt_index'],
+                ak8_branch_dict['AK8jets_9Xbb'],
+                ak8_branch_dict['AK8jets_9Xtt'],
+                ak8_branch_dict['AK8jets_9Xtm'],
+                ak8_branch_dict['AK8jets_9Xte'],
+                ak8_branch_dict['AK8jets_Mass'],
+                ak8_branch_dict['AK8jets_Pt'],
+                ak8_branch_dict['AK8jets_Eta'],
+                ak8_branch_dict['AK8jets_Phi']
+            )
+            
+            ### saving trees
+            out_file["Eventree"] = event_branch_dict
+            out_file["Leptree"] = lepton_branch_dict
+            out_file["AK8tree"] = ak8_branch_dict
+            
             del event_tree
-            del ak8_file
-            del branch_dict
+            del out_file
+            del event_branch_dict
+            del lepton_branch_dict
+            del ak8_branch_dict
             
             gc.collect()
             return 0
         
-    
-    # for process_ in fileset[process][0][:1]:
-    #     process_file(process_)
-        
     num_processes = multiprocessing.cpu_count()
-    pool = Pool(round(num_processes*0.8))
-    print('using {} cores'.format(round(num_processes*0.8)))
+    pool = Pool(round(num_processes*0.85))
+    # pool = Pool(1)
+    print('using {} cores'.format(round(num_processes*0.85)))
     results = []
     with tqdm(total=len(fileset[process][0])) as pbar:
         for result in tqdm(pool.imap(process_file, fileset[process][0])):
@@ -452,8 +339,5 @@ for process in process_list:
             
     pool.close()
     pool.join()
-          
-    ## with Pool(round(num_processes*0.8)) as pool:
-    ##     results = pool.map(process_file, fileset[process][0])
           
         

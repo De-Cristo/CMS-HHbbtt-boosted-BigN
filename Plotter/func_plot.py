@@ -5,14 +5,14 @@ from array import array
 import os
 R.EnableImplicitMT()
 R.gROOT.SetBatch(True)
-    
-path = "/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/" + "AK8based_Out_625/"
+from Plotter.plot_utils import *
 
-process_list = ['SMHH', 'VBFH', 'ggFH']
+path = "/gwpool/users/lzhang/private/bbtt/CMS-HHbbtt-boosted-BigN/" + "AK8based_Out_810_hadd/"
+
+process_list = ['SMHH', 'DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf','VBFH', 'ggFH','TTbarHad', 'TTbarSemi', 'TTbarDiLep']
 sample_list = ['SMHH', 'DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf','VBFH', 'ggFH','TTbarHad', 'TTbarSemi', 'TTbarDiLep']
-Sig_list = ['SMHH']
-SH_list = ['VBFH', 'ggFH']
 DY_list = ['DY+Jets50To100', 'DY+Jets100To250', 'DY+Jets250To400', 'DY+Jets400To650', 'DY+Jets650ToInf']
+SH_list = ['VBFH', 'ggFH']
 TT_list = ['TTbarHad', 'TTbarSemi', 'TTbarDiLep']
 
 fileset = {}
@@ -33,121 +33,143 @@ for process in sample_list:
         if file.endswith(".root"):
             fileset[process].append(path+'/'+process+'/'+file)
             
+print("root files are read.")
+            
 df_dict = {}
 histo_dict = {}
 
-interested_variables = {"ak8jets_SoftDropMass","true_weight","ak8jets_Pt","ak8jets_Eta","ak8jets_Mass","ak8jets_probHtt","match_gen_tau","match_gen_hav","bParticleNetTauAK8JetTags_probHtt"}
+interested_variables = {"ak8jets_SoftDropMass", "bParticleNetTauAK8JetTags_masscorr","true_weight","ak8jets_Pt","ak8jets_Mass",\
+                        "ak8jets_probHttOverQCD","ak8jets_probHtl","ak8jets_probHttOverLepton","ak8jets_probQCD0hf",\
+                        "match_gen_tau","match_gen_hav","bParticleNetTauAK8JetTags_probHtt",\
+                        "match_gen_taus_sign","match_gen_taus_dR"}
+
+eta_cut = "abs(ak8jets_Eta)<2.5"
+# mass_cut = "ak8jets_SoftDropMass>30"
+mass_cut = "ak8jets_SoftDropMass>60 && ak8jets_SoftDropMass<150"
+match_gen_tau_0 = "match_gen_tau==0"
+match_gen_tau_1 = "match_gen_tau==1"
+match_gen_tau_2 = "match_gen_tau==2"
+veto_emu = "match_gen_emu==0"
+match_reco_taus = "match_hps_tau==2"
+match_gen_hav = "match_gen_hav>0"
+match_gen_hav_0 = "match_gen_hav==0"
+
+htl_cut = "ak8jets_probHttOverLepton>0.5"
+
+pt_range_A = "ak8jets_Pt>250 && ak8jets_Pt<350"
+pt_range_B = "ak8jets_Pt>350 && ak8jets_Pt<500"
+pt_range_C = "ak8jets_Pt>500 && ak8jets_Pt<750"
+pt_range_D = "ak8jets_Pt>750"
 
 for sample in sample_list:
     df_dict[sample] = R.RDataFrame("ak8tree", fileset[sample], interested_variables)
     
-    df_dict[sample+'_T1'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
+    # each type will be matched with 2 reco taus and cutted with softdrop Higgs mass window
+    # Type 1 matched with 2 gen taus
+    df_dict[sample+'_T1'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_2).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T1_A'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_A).Filter(match_gen_tau_2).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T1_B'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_B).Filter(match_gen_tau_2).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T1_C'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_C).Filter(match_gen_tau_2).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T1_D'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_D).Filter(match_gen_tau_2).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
     
-    df_dict[sample+'_T1_S'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>60 && ak8jets_SoftDropMass<130").Filter("ak8jets_Pt>250").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
+    # Type 2 matched with 1 gen tau
+    df_dict[sample+'_T2'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_1).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T2_A'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_A).Filter(match_gen_tau_1).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T2_B'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_B).Filter(match_gen_tau_1).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T2_C'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_C).Filter(match_gen_tau_1).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
+    df_dict[sample+'_T2_D'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(pt_range_D).Filter(match_gen_tau_1).Filter(veto_emu).Filter(match_reco_taus).Filter(htl_cut)
     
-    df_dict[sample+'_T1_A'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250 && ak8jets_Pt<350").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
+    # Type 3 matched with 0 gen tau and at least 1 heavy gen jet
+    df_dict[sample+'_T3'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(veto_emu).Filter(match_reco_taus).Filter(match_gen_hav).Filter(htl_cut)
+    df_dict[sample+'_T3_A'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(pt_range_A).Filter(veto_emu).Filter(match_reco_taus).Filter(match_gen_hav).Filter(htl_cut)
+    df_dict[sample+'_T3_B'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(pt_range_B).Filter(veto_emu).Filter(match_reco_taus).Filter(match_gen_hav).Filter(htl_cut)
+    df_dict[sample+'_T3_C'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(pt_range_C).Filter(veto_emu).Filter(match_reco_taus).Filter(match_gen_hav).Filter(htl_cut)
+    df_dict[sample+'_T3_D'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(pt_range_D).Filter(veto_emu).Filter(match_reco_taus).Filter(match_gen_hav).Filter(htl_cut)
     
-    df_dict[sample+'_T1_B'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>350 && ak8jets_Pt<500").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
+    # Type 4 matched with 0 gen taus and 0 heavy gen jet
+    df_dict[sample+'_T4'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(match_gen_hav_0).Filter(veto_emu).Filter(match_reco_taus).Filter(veto_emu).Filter(htl_cut)
+    df_dict[sample+'_T4_A'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(match_gen_hav_0).Filter(pt_range_A).Filter(veto_emu).Filter(match_reco_taus).Filter(veto_emu).Filter(htl_cut)
+    df_dict[sample+'_T4_B'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(match_gen_hav_0).Filter(pt_range_B).Filter(veto_emu).Filter(match_reco_taus).Filter(veto_emu).Filter(htl_cut)
+    df_dict[sample+'_T4_C'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(match_gen_hav_0).Filter(pt_range_C).Filter(veto_emu).Filter(match_reco_taus).Filter(veto_emu).Filter(htl_cut)
+    df_dict[sample+'_T4_D'] = df_dict[sample].Filter(eta_cut).Filter(mass_cut).Filter(match_gen_tau_0).Filter(match_gen_hav_0).Filter(pt_range_D).Filter(veto_emu).Filter(match_reco_taus).Filter(veto_emu).Filter(htl_cut)
     
-    df_dict[sample+'_T1_C'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>500 && ak8jets_Pt<750").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T1_D'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>750 && ak8jets_Pt<1000").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T1_E'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>1000").Filter("match_gen_tau==2").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_S'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>60 && ak8jets_SoftDropMass<130").Filter("ak8jets_Pt>250").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_A'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250 && ak8jets_Pt < 350").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_B'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>350 && ak8jets_Pt<500").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_C'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>500 && ak8jets_Pt<750").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_D'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>750 && ak8jets_Pt<1000").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T2_E'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>1000").Filter("match_gen_tau==1").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_S'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>60 && ak8jets_SoftDropMass<130").Filter("ak8jets_Pt>250").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_A'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250 && ak8jets_Pt < 350").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_B'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>350 && ak8jets_Pt<500").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_C'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>500 && ak8jets_Pt<750").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_D'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>750 && ak8jets_Pt<1000").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T3_E'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>1000").Filter("match_gen_tau==0").Filter("match_gen_hav>0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_S'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>60 && ak8jets_SoftDropMass<130").Filter("ak8jets_Pt>250").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_A'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>250 && ak8jets_Pt < 350").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_B'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>350 && ak8jets_Pt<500").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_C'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>500 && ak8jets_Pt<750").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_D'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>750 && ak8jets_Pt<1000").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-    df_dict[sample+'_T4_E'] = df_dict[sample].Filter("abs(ak8jets_Eta)<2.5").Filter("ak8jets_SoftDropMass>30").Filter("ak8jets_Pt>1000").Filter("match_gen_tau==0").Filter("match_gen_hav==0").Filter("match_gen_emu==0")#.Filter("match_hps_tau==2")
-    
-type_name = ['T1', 'T2', 'T3', 'T4', 'T1_A', 'T2_A', 'T3_A', 'T4_A', 'T1_B', 'T2_B', 'T3_B', 'T4_B', 'T1_C', 'T2_C', 'T3_C', 'T4_C', 'T1_D', 'T2_D', 'T3_D', 'T4_D', 'T1_E', 'T2_E', 'T3_E', 'T4_E', 'T1_S', 'T2_S', 'T3_S', 'T4_S']
+type_name = ['T1', 'T2', 'T3', 'T4', 'T1_A', 'T2_A', 'T3_A', 'T4_A', 'T1_B', 'T2_B', 'T3_B', 'T4_B', 'T1_C', 'T2_C', 'T3_C', 'T4_C', 'T1_D', 'T2_D', 'T3_D', 'T4_D']
 
 for sample in Sig_list:
     for jet_type in type_name:
         print(f'{sample}_{jet_type}')
         histo_dict[f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 200, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 1000, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', 200, 0, 1), "hps_tau1_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverQCD'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverQCD', f'{sample}_{jet_type}_ak8jets_probHttOverQCD', 1000, 0, 1), "ak8jets_probHttOverQCD", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', 200, 0, 1), "hps_tau2_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHtl'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHtl', f'{sample}_{jet_type}_ak8jets_probHtl', 1000, 0, 1), "ak8jets_probHtl", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverLepton'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverLepton', f'{sample}_{jet_type}_ak8jets_probHttOverLepton', 1000, 0, 1), "ak8jets_probHttOverLepton", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probQCD0hf'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probQCD0hf', f'{sample}_{jet_type}_ak8jets_probQCD0hf', 1000, 0, 1), "ak8jets_probQCD0hf", "true_weight").GetPtr()
+                
         
 for sample in SH_list:
     for jet_type in type_name:
         print(f'{sample}_{jet_type}')
         histo_dict[f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 200, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 1000, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', 200, 0, 1), "hps_tau1_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverQCD'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverQCD', f'{sample}_{jet_type}_ak8jets_probHttOverQCD', 1000, 0, 1), "ak8jets_probHttOverQCD", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', 200, 0, 1), "hps_tau2_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHtl'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHtl', f'{sample}_{jet_type}_ak8jets_probHtl', 1000, 0, 1), "ak8jets_probHtl", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverLepton'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverLepton', f'{sample}_{jet_type}_ak8jets_probHttOverLepton', 1000, 0, 1), "ak8jets_probHttOverLepton", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probQCD0hf'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probQCD0hf', f'{sample}_{jet_type}_ak8jets_probQCD0hf', 1000, 0, 1), "ak8jets_probQCD0hf", "true_weight").GetPtr()
+        
         
 for sample in DY_list:
     for jet_type in type_name:
         print(f'{sample}_{jet_type}')
         histo_dict[f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 200, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 1000, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', 200, 0, 1), "hps_tau1_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverQCD'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverQCD', f'{sample}_{jet_type}_ak8jets_probHttOverQCD', 1000, 0, 1), "ak8jets_probHttOverQCD", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', 200, 0, 1), "hps_tau2_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHtl'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHtl', f'{sample}_{jet_type}_ak8jets_probHtl', 1000, 0, 1), "ak8jets_probHtl", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverLepton'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverLepton', f'{sample}_{jet_type}_ak8jets_probHttOverLepton', 1000, 0, 1), "ak8jets_probHttOverLepton", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probQCD0hf'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probQCD0hf', f'{sample}_{jet_type}_ak8jets_probQCD0hf', 1000, 0, 1), "ak8jets_probQCD0hf", "true_weight").GetPtr()
         
 for sample in TT_list:
     for jet_type in type_name:
         print(f'{sample}_{jet_type}')
         histo_dict[f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 200, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', f'{sample}_{jet_type}_bParticleNetTauAK8JetTags_probHtt', 1000, 0, 1), "bParticleNetTauAK8JetTags_probHtt", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau1_DeepTauVSJets', 200, 0, 1), "hps_tau1_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverQCD'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverQCD', f'{sample}_{jet_type}_ak8jets_probHttOverQCD', 1000, 0, 1), "ak8jets_probHttOverQCD", "true_weight").GetPtr()
         
-        histo_dict[f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets'] = \
-        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', f'{sample}_{jet_type}_hps_tau2_DeepTauVSJets', 200, 0, 1), "hps_tau2_DeepTauVSJets", "true_weight").GetPtr()
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHtl'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHtl', f'{sample}_{jet_type}_ak8jets_probHtl', 1000, 0, 1), "ak8jets_probHtl", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probHttOverLepton'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probHttOverLepton', f'{sample}_{jet_type}_ak8jets_probHttOverLepton', 1000, 0, 1), "ak8jets_probHttOverLepton", "true_weight").GetPtr()
+        
+        histo_dict[f'{sample}_{jet_type}_ak8jets_probQCD0hf'] = \
+        df_dict[f'{sample}_{jet_type}'].Histo1D((f'{sample}_{jet_type}_ak8jets_probQCD0hf', f'{sample}_{jet_type}_ak8jets_probQCD0hf', 1000, 0, 1), "ak8jets_probQCD0hf", "true_weight").GetPtr()
 
-histo_file_out = R.TFile("histo_no_hps.root", "RECREATE")        
+histo_file_out = R.TFile("histo_2hps_Masscut_Htlcut_0820.root", "RECREATE")
 for key, value in histo_dict.items():
     value.Write()
     print(key + ' written')
